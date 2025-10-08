@@ -32,4 +32,5 @@ Link sumber <i>dataset</i> : https://www.reddit.com/r/padel/best.json , di-<i>sc
 
 <h3>Link PWS</h3>
 <hr>
+Link URL <i>deployment</i> aplikasi web kami dapat dilihat melalui link berikut <a href="https://nathanael-leander-smash.pbp.cs.ui.ac.id/">nathanael-leander-smash.pbp.cs.ui.ac.id</a>
 
