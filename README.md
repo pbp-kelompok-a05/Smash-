@@ -13,10 +13,14 @@ Tugas Kelompok PBP A - A05
 
 <h3>Deskripsi Website 🌐</h3>
 <hr>
-Pada proyek kali ini, kami membuat proyek berupa website bernama <i>Smash!</i> sebagai sebuah forum diskusi olahraga padel yang saat ini sedang <i>Booming!</i> belakangan ini di masyarakat. Alasan kami memilih <i>Smash!</i> sebagai nama aplikasi web kami adalah filosofi di balik kata tersebut yang menggambarkan r
+Pada proyek kali ini, kami membuat proyek berupa website bernama <i>Smash!</i> sebagai sebuah forum diskusi olahraga padel yang saat ini sedang <i>Booming!</i> belakangan ini di masyarakat. Alasan kami memilih <i>Smash!</i> sebagai nama aplikasi web kami adalah filosofi di balik kata tersebut yang menggambarkan rasa semangat di balik pukulan ofensif yang kuat dalam olahraga padel untuk mendapatkan kemenangan. Melalui aplikasi web kami, <i>user</i> dapat membangun komunitas olahraga padel sehingga mengundang banyak perhatian orang awam yang belum mengenal padel.
 
 <h3>Daftar modul 📃</h3>
 <hr>
+
+- <b>Register, Login, dan Logout</b>: modul ini menyediakan fitur untuk melakukan registrasi akun baru di aplikasi web. Django akan membantu pengguna baru untuk memilih <i>username</i> dan <i>password</i> unik yang mempunyai protokol keamanan tinggi. Lalu, modul ini akan menyediakan fitur login dan logout bagi <i>user</i> yang sudah terdaftar.
+- <b>Post</b>: modul ini akan menyediakan fitur untuk memulai diskusi antar <i>user</i> yang terdaftar di dalam aplikasi. Fitur ini mendukung pencantuman link gambar dan video yang akan memberikan preview kepada <i>user</i>.
+- <b>Comment</b>: fitur ini menyediakan 
 
 <h3>Link sumber dataset</h3>
 <hr>
