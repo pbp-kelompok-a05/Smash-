@@ -1,0 +1,48 @@
+{% load static %}
+
+<!-- POP-UP BANNER -->
+<div id="popup-ads"
+     class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 transition-opacity duration-300"
+     data-delay="{{ ad.delay|default:3 }}">
+
+  <div class="relative bg-transparent">
+    <!-- Tombol close -->
+    <button id="close-ads"
+            class="absolute -top-3 -right-3 bg-white rounded-full shadow text-gray-600 w-8 h-8 flex items-center justify-center hover:bg-gray-100">
+      ✖
+    </button>
+
+    <!-- Gambar iklan -->
+    {% if ad.link %}
+      <a href="{{ ad.link }}" target="_blank">
+        <img src="{{ ad.image.url }}" alt="Advertisement"
+             class="rounded-2xl w-80 sm:w-96 object-cover shadow-lg hover:scale-[1.02] transition-transform">
+      </a>
+    {% else %}
+      <img src="{{ ad.image.url }}" alt="Advertisement"
+           class="rounded-2xl w-80 sm:w-96 object-cover shadow-lg hover:scale-[1.02] transition-transform">
+    {% endif %}
+  </div>
+</div>
+
+<!-- Script Pop-up -->
+<script>
+window.addEventListener("load", () => {
+  const popup = document.getElementById("popup-ads");
+
+  // Ambil nilai delay dari atribut data-delay (biar gak bentrok sama Django template)
+  const delay = parseInt(popup.dataset.delay) * 1000;
+
+  // Tampilkan pop-up setelah delay
+  setTimeout(() => {
+    popup.classList.remove("hidden");
+  }, delay);
+});
+
+// Tombol untuk menutup pop-up
+document.getElementById("close-ads").addEventListener("click", () => {
+  const popup = document.getElementById("popup-ads");
+  popup.classList.add("opacity-0");
+  setTimeout(() => popup.classList.add("hidden"), 300);
+});
+</script>

@@ -1,0 +1,158 @@
+{% load static %}
+<div class="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden w-full">
+
+  <!-- Header -->
+  <div class="flex items-start p-5 pb-0 relative">
+
+    <!-- Tampilkan pinned📌 kalau post dipinned-->
+    <!-- Jujur yang ini tampilannya belum sempurna-->
+    {% if post.is_pinned %}
+    <div class="absolute top-3 right-3 flex items-center text-yellow-500 text-sm font-semibold">
+    📌 Pinned
+    </div>
+    {% endif %}
+
+    <!-- Avatar author-->
+    <img src="{% static 'img/default-avatar.png' %}" alt="avatar"
+         class="w-10 h-10 rounded-full object-cover mr-3">
+
+    <!-- Info judul, nama penulis, dan waktu posting -->
+    <div class="flex-1">
+      <p class="text-sm font-semibold text-gray-800">{{ post.title }}</p>
+      <div class="flex items-center space-x-2 text-sm text-gray-500">
+        <span class="text-blue-500 font-medium">
+          @{{ post.author|default:"Anynomous" }}
+        </span>
+        <span>• {{ post.created_at|timesince }} ago</span>
+      </div>
+    </div>
+
+  <!-- Body -->
+  <div class="p-5">
+
+    <!-- Isi postingan (potongan 200 karakter pertama) -->
+    <p class="text-gray-700 leading-relaxed mb-4">
+      {{ post.content|truncatechars:200 }}
+      {% if post.content|length > 200 %}
+        <a href="#" class="text-blue-500 font-medium hover:underline">...view more</a>
+      {% endif %}
+    </p>
+
+    <!-- Jika ada gambar dalam postingan -->
+    {% if post.image %}
+    <img src="{{ post.image.url }}" alt="{{ post.title }}"
+         class="rounded-xl w-full object-cover mb-4 transition-transform duration-300 hover:scale-[1.02]">
+    {% endif %}
+
+    <!-- Jumlah likes dan comments -->
+    <div class="text-sm text-gray-400 mb-3">
+      <span>{{ post.likes|default:0 }} likes</span> • 
+      <span>{{ post.comments|default:0 }} comments</span>
+    </div>
+
+    <hr class="border-gray-100 mb-3">
+
+    <!-- Bagian button like, comment, dislike, save (bookmark), share -->
+    <div class="flex justify-between text-gray-600 text-sm select-none">
+      <div class="flex space-x-6">
+        <!-- Like -->
+        <button class="action-btn flex items-center hover:text-pink-600 transition" data-active-color="text-pink-600">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5A4.69 4.69 0 0012 6.75a4.69 4.69 0 00-4.312-3A4.69 4.69 0 003 8.25c0 7.203 9 12 9 12s9-4.797 9-12z" />
+          </svg>
+          Like
+        </button>
+
+        <!-- Dislike -->
+        <button class="action-btn flex items-center hover:text-blue-600 transition" data-active-color="text-blue-600">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M10.125 18.75h8.25a1.125 1.125 0 001.125-1.125v-6.75a1.125 1.125 0 00-1.125-1.125h-4.189l.513-2.462a.563.563 0 00-.551-.688H10.5a.563.563 0 00-.562.562v11.438a.563.563 0 00.563.563zM6 18.75H3.75a.75.75 0 01-.75-.75V10.5a.75.75 0 01.75-.75H6v9z" />
+          </svg>
+          Dislike
+        </button>
+
+        <!-- Comment -->
+        <button class="action-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M7.5 8.25h9m-9 3h9m-9 3h5.25M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4.95-1.32L3 20.25l1.65-3.3A7.94 7.94 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Comment
+        </button>
+      </div>
+
+      <div class="flex space-x-6">
+        <!-- Bookmark -->
+        <button class="action-btn flex items-center hover:text-yellow-500 transition" data-active-color="text-yellow-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17.25 3H6.75A1.5 1.5 0 005.25 4.5v15a.75.75 0 001.21.59L12 16.5l5.54 3.59a.75.75 0 001.21-.59v-15A1.5 1.5 0 0017.25 3z" />
+          </svg>
+          Save
+        </button>
+
+        <!-- Share -->
+        <button class="action-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.8" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
+            <circle cx="6" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="18" cy="6" r="2" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="8" y1="12" x2="16" y2="7" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="8" y1="12" x2="16" y2="17" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          Share
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bagian script supaya saat klik ada efek warna berubah -->
+<!-- Bagian ini juga belum sempurna -->
+<script>
+document.querySelectorAll(".action-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const activeColor = btn.dataset.activeColor;
+    const svg = btn.querySelector("svg");
+    const isActive = btn.classList.toggle("active");
+
+    svg.classList.add("scale-110");
+    setTimeout(() => svg.classList.remove("scale-110"), 150);
+
+    if (isActive) {
+      btn.classList.add(activeColor);
+      svg.setAttribute("fill", "currentColor");
+    } else {
+      btn.classList.remove(activeColor);
+      svg.setAttribute("fill", "none");
+    }
+
+    // Kalau like/dislike diklik, matikan salah satunya:
+    if (btn.classList.contains("like-btn") && isActive) {
+      // kalau like aktif, matikan dislike
+      const dislikeBtn = btn.closest('.flex').querySelector('.dislike-btn');
+      if (dislikeBtn && dislikeBtn.classList.contains("active")) {
+        dislikeBtn.classList.remove("active", dislikeBtn.dataset.activeColor);
+        const dislikeSvg = dislikeBtn.querySelector("svg");
+        dislikeSvg.setAttribute("fill", "none");
+      }
+    }
+    if (btn.classList.contains("dislike-btn") && isActive) {
+      // kalau dislike aktif, matikan like
+      const likeBtn = btn.closest('.flex').querySelector('.like-btn');
+      if (likeBtn && likeBtn.classList.contains("active")) {
+        likeBtn.classList.remove("active", likeBtn.dataset.activeColor);
+        const likeSvg = likeBtn.querySelector("svg");
+        likeSvg.setAttribute("fill", "none");
+      }
+    }
+  });
+});
+</script>
