@@ -14,6 +14,7 @@ from pathlib import Path
 
 import os
 from dotenv import load_dotenv
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -27,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-=!anvbsr!2iko9np5o1=bpouzm@4e7+m%tzh*&k20gl#$=%wyh"
 
-PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
+PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -44,7 +45,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "main"
+    "main",
+    "Post",
+    "Report",
 ]
 
 MIDDLEWARE = [
@@ -84,24 +87,22 @@ WSGI_APPLICATION = "smash.wsgi.application"
 if PRODUCTION:
     # Production: gunakan PostgreSQL dengan kredensial dari environment variables
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME'),
-            'USER': os.getenv('DB_USER'),
-            'PASSWORD': os.getenv('DB_PASSWORD'),
-            'HOST': os.getenv('DB_HOST'),
-            'PORT': os.getenv('DB_PORT'),
-            'OPTIONS': {
-                'options': f"-c search_path={os.getenv('SCHEMA', 'public')}"
-            }
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME"),
+            "USER": os.getenv("DB_USER"),
+            "PASSWORD": os.getenv("DB_PASSWORD"),
+            "HOST": os.getenv("DB_HOST"),
+            "PORT": os.getenv("DB_PORT"),
+            "OPTIONS": {"options": f"-c search_path={os.getenv('SCHEMA', 'public')}"},
         }
     }
 else:
     # Development: gunakan SQLite
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
