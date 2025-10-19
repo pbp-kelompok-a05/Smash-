@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -12,7 +13,7 @@ class Comment(models.Model):
         verbose_name="Related Post",
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    author = models.CharField(max_length=100, verbose_name="Comment Author")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     content = models.TextField(verbose_name="Comment Content")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")

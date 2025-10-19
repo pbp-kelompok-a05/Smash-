@@ -1,9 +1,10 @@
 import uuid
 from django.db import models
+from django.contrib.auth.models import User
 
 
 # Create your models here.
-class Categoy(models.Model):
+class Category(models.Model):
     # Define attribute yang dibutuhkan
     name = models.CharField(max_length=255, verbose_name="Category Name")
     description = models.TextField(max_length=255, verbose_name="Description")
@@ -27,7 +28,9 @@ class ForumPost(models.Model):
     # Content post -> Isi dari Post
     content = models.TextField(verbose_name="content")
     # Author atau penulis Post
-    author = models.CharField(
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    # Kategori post
+    category = models.CharField(
         max_length=100,
         choices=post_kategory,
         default="category",
