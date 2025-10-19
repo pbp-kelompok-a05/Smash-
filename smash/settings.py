@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "Post",
     "Report",
     "Comment",
+    "ads",
 ]
 
 MIDDLEWARE = [
