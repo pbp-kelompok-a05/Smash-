@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     "Report",
     "Comment",
     "ads",
+    "homepage",
+    "account",
 ]
 
 MIDDLEWARE = [
