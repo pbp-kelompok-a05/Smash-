@@ -6,11 +6,13 @@ from django.utils import timezone
 
 class Report(models.Model):
     # Status choices
+    # Ide : Aplikasi web nantinya tidak akan secara langsung mengkonfirmasi laporan yang masuk, tetapi akan mengeceknya terlebih dahuku
     STATUS_PENDING = 'pending'
     STATUS_UNDER_REVIEW = 'under_review'
     STATUS_RESOLVED = 'resolved'
     STATUS_REJECTED = 'rejected'
     
+    # List kategori status laporan dikonfirmasi oleh web (akan di set oleh admin)
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_UNDER_REVIEW, 'Under Review'),
@@ -19,11 +21,14 @@ class Report(models.Model):
     ]
     
     # Reason categories
+    # Ide : Aplikasi web nantinya akan menyediakan pilihan atau alasan laporan tersebut dibuat oleh user
+    # Ide tambahannya, user dapat memasukkan alasan spesifik kenapa laporan tersebut diajukan 
     REASON_SPAM = 'spam'
     REASON_HARASSMENT = 'harassment'
     REASON_INAPPROPRIATE = 'inappropriate'
     REASON_OTHER = 'other'
     
+    # List untuk pilihan alasan laporan dibuat
     REASON_CHOICES = [
         (REASON_SPAM, 'Spam atau iklan'),
         (REASON_HARASSMENT, 'Pelecehan atau bullying'),
@@ -32,6 +37,8 @@ class Report(models.Model):
     ]
 
     # Reporter information
+    # Mengambil identitas dari user yang membuat laporan 
+    # ON DELETE CASCADE berfungsi agar ketika objek dihapus, maka objek terkait akan dihapus secara otomatis sehingga tidak melanggar referential integrity
     reporter = models.ForeignKey(
         User, 
         on_delete=models.CASCADE,
