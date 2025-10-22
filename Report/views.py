@@ -1,70 +1,92 @@
-# Penambahan import untuk implementasi penggunaan data dari cookies
 import datetime
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.urls import reverse
-
-# Penambahan import modul decorator login_required dari sistem autentikasi milik Django
 from django.contrib.auth.decorators import login_required
-
 from django.shortcuts import render, redirect, get_object_or_404
-
-# Penambahan import modul untuk request pengiriman data ke dalam bentuk XML dan JSON
-from django.http import HttpResponse
 from django.core import serializers
-
-# Penambahan import modul untuk membuat fungsi dan form registrasi serta fungsi login dan logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-
-# Penambahan import untuk AJAX dan JSON response
-from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 
-import Report
-from Report.forms import ReportForm
+# Import yang benar untuk model dan form
+from .models import Report
+from .forms import ReportForm
 
-# Create your views here.
+@login_required
+def report_list(request):
+    """Menampilkan semua laporan dalam format HTML"""
+    reports = Report.objects.all().order_by('-created_at')
+    return render(request, 'report_list.html', {'reports': reports})
+
+@login_required
+def report_detail(request, report_id):
+    """Menampilkan detail laporan tertentu"""
+    report = get_object_or_404(Report, pk=report_id)
+    return render(request, 'report_detail.html', {'report': report})
+
 @csrf_exempt
 @login_required
-@require_http_methods(["POST"])
-# Fungsi untuk membuat laporan 
+@require_http_methods(["POST", "GET"])
 def create_report(request):
-    form = ReportForm(data=request.POST)
-    # Cek apakah form yang dimasukkan valid
-    if form.is_valid():
-        # Menyimpan report_entry dari user
-        report_entry = form.save(commit=False)
-        report_entry.save()
-        context = {'form' : form}
-        return render(request, "", context)
+    """Fungsi untuk membuat laporan baru"""
+    if request.method == "POST":
+        form = ReportForm(request.POST)
+        if form.is_valid():
+            report_entry = form.save(commit=False)
+            report_entry.user = request.user  # Assign user yang login
+            report_entry.save()
+            messages.success(request, 'Laporan berhasil dibuat!')
+            
+            # Jika request AJAX, kembalikan JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Laporan berhasil dibuat',
+                    'report_id': report_entry.id
+                })
+            return redirect('report_list')
+        else:
+            # Handle form tidak valid
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'errors': form.errors
+                }, status=400)
+    else:
+        form = ReportForm()
     
-# Menambahkan fungsi untuk mengirimkan data dalam bentuk JSON dan XML
-def show_xml(request):
-    report_list = Report.objects.all()
+    return render(request, 'create_report.html', {'form': form})
+
+# Fungsi untuk XML dan JSON - PERBAIKAN: Nama fungsi diperbaiki
+def show_json(request):
+    """Mengembalikan semua laporan dalam format JSON"""
+    report_list = Report.objects.all().order_by('-created_at')
     json_data = serializers.serialize("json", report_list)
     return HttpResponse(json_data, content_type="application/json")
 
-def show_json(request):
-    report_list = Report.objects.all()
+def show_xml(request):
+    """Mengembalikan semua laporan dalam format XML"""
+    report_list = Report.objects.all().order_by('-created_at')
     xml_data = serializers.serialize("xml", report_list)
     return HttpResponse(xml_data, content_type="application/xml")
 
-# Melakukan filter berdasarkan ID
-def show_xml_by_id(request, report_id):
-    try:
-        report_list = Report.objects.filter(pk=report_id)
-        xml_data = serializers.serialize("xml", report_list)
-        return HttpResponse(xml_data, content_type="application/xml")
-    except Report.DoesNotExist:
-        return HttpResponse(status=404)
-    
 def show_json_by_id(request, report_id):
+    """Mengembalikan laporan tertentu dalam format JSON"""
     try:
-        report_list = Report.objects.filter(pk=report_id)
-        json_data = serializers.serialize("json", report_list)
+        report = Report.objects.get(pk=report_id)
+        json_data = serializers.serialize("json", [report])
         return HttpResponse(json_data, content_type="application/json")
     except Report.DoesNotExist:
-        return HttpResponse(status=404)
+        return JsonResponse({'error': 'Laporan tidak ditemukan'}, status=404)
+
+def show_xml_by_id(request, report_id):
+    """Mengembalikan laporan tertentu dalam format XML"""
+    try:
+        report = Report.objects.get(pk=report_id)
+        xml_data = serializers.serialize("xml", [report])
+        return HttpResponse(xml_data, content_type="application/xml")
+    except Report.DoesNotExist:
+        return JsonResponse({'error': 'Laporan tidak ditemukan'}, status=404)
