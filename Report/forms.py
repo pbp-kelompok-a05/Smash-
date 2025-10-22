@@ -3,8 +3,10 @@ from .models import Report
 
 class ReportForm(forms.ModelForm):
     class Meta:
+        # Model diambil dari models Report 
         model = Report
-        fields = ['reason', 'description']
+        # Input yang akan diminta 
+        fields = ['reason', 'description']    
         widgets = {
             'reason': forms.Select(attrs={
                 'class': 'form-select',

@@ -51,7 +51,7 @@ class Report(models.Model):
     object_id = models.PositiveIntegerField()
     reported_object = GenericForeignKey('content_type', 'object_id')
     
-    # Report details
+    # Report details    
     reason = models.CharField(
         max_length=20,
         choices=REASON_CHOICES,
@@ -124,8 +124,7 @@ class Report(models.Model):
         if self.status == self.STATUS_RESOLVED and not self.resolved_at:
             self.resolved_at = timezone.now()
         elif self.status != self.STATUS_RESOLVED:
-            self.resolved_at = None
-            
+            self.resolved_at = None            
         super().save(*args, **kwargs)
 
     def get_reported_content_type(self):
