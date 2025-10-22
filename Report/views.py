@@ -1,3 +1,4 @@
+# import modul dari library yang dibutuhkan 
 import datetime
 from django.http import HttpResponseRedirect, HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.urls import reverse
