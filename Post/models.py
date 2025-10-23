@@ -24,7 +24,7 @@ class Category(models.Model):
 # Class untuk Post ke Forum
 class ForumPost(models.Model):
     # Define type atau kategori post
-    post_kategory = [
+    POST_CATEGORY = [
         ("discussion", "Discussion"),
         ("question", "Question"),
         ("review", "Review"),
@@ -37,17 +37,17 @@ class ForumPost(models.Model):
     # Judul post
     title = models.CharField(max_length=255, verbose_name="Post Title")
     # Content post -> Isi dari Post
-    content = models.TextField(verbose_name="content")
+    content = models.TextField(verbose_name="Content")
     # Author atau penulis Post
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="forum_posts", null=True)
     # Category untuk post 
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Post Category")
-    # Kategori post
+    # Tipe post
     post_type = models.CharField(
         max_length=100,
-        choices=post_kategory,
-        default="category",
-        verbose_name="Post Category",
+        choices=POST_CATEGORY,
+        default="discussion",
+        verbose_name="Post Type",
     )
 
     # Fields untuk media -> gambar dan video_url
@@ -57,16 +57,14 @@ class ForumPost(models.Model):
     # Metadata untuk class ForumPost
     # Timestamp untuk pembuatan dan update post
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
-    update_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
     # Additions
     is_pinned = models.BooleanField(default=False, verbose_name="Pinned 📌")
-    # Delete pin
+    # Soft delete
     is_deleted = models.BooleanField(default=False, verbose_name="Soft Deleted")
 
     # Counters
     views = models.PositiveIntegerField(default=0, verbose_name="Views Count")
-    likes = models.PositiveIntegerField(default=0, verbose_name="Likes Count")
-    dislikes = models.PositiveIntegerField(default=0, verbose_name="Dislikes Count")
 
     # Class Meta
     class Meta:
@@ -84,8 +82,8 @@ class ForumPost(models.Model):
         if self.image and self.video_url:
             raise ValidationError("Post can have either an image or a video URL, not both!")
 
-    # Menghapus post forum
-    def soft_deleted(self):
+    # Menghapus post forum (soft delete)
+    def soft_delete(self):
         self.is_deleted = True
         self.save()
 
@@ -94,42 +92,25 @@ class ForumPost(models.Model):
         self.is_deleted = False
         self.save()
 
-    # Mendapatkan jumlah like dan dislike
+    # Mendapatkan jumlah like dan dislike dari model PostLike
     def get_likes_count(self):
         return self.likes.filter(is_like=True).count()
 
     def get_dislikes_count(self):
         return self.likes.filter(is_like=False).count()
     
+    # Mendapatkan jumlah komentar - diasumsikan model Comment memiliki ForeignKey ke ForumPost dengan related_name='comments'
     def get_comment_count(self):
-        return self.comments.filter(is_deleted=False).count()
+        # Menggunakan try-except untuk handle jika relasi comments belum ada
+        try:
+            return self.comments.count()
+        except:
+            return 0
 
     # Increment views
     def increment_views(self):
         self.views += 1
         self.save(update_fields=["views"])
-
-    # Like post
-    def like(self):
-        self.likes += 1
-        self.save()
-
-    # Dislike post
-    def dislike(self):
-        self.dislikes += 1
-        self.save()
-
-    # Unlike post
-    def unlike(self):
-        if self.likes > 0:
-            self.likes -= 1
-            self.save()
-
-    # Undislike post
-    def undislike(self):
-        if self.dislikes > 0:
-            self.dislikes -= 1
-            self.save()
 
     # Pin post
     def pin(self):
@@ -141,7 +122,7 @@ class ForumPost(models.Model):
         self.is_pinned = False
         self.save()
 
-# Class unutk PostLike -> Dipisah dari Forum Post untuk mempermudah proses pengambilan data
+# Class untuk PostLike -> Dipisah dari Forum Post untuk mempermudah proses pengambilan data
 class PostLike(models.Model):
     # Membuat attribute yang dibutuhkan 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
