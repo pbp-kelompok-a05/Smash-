@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-8 px-4">
+  
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Comments</h2>
+
+  <!-- Form to add a new comment -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-8">
+    <h3 class="font-semibold text-lg text-gray-800 mb-4">Add your comment</h3>
+    <form method="post" action="">
+      {% csrf_token %}
+      <div class="mb-4">
+        {{ form.content.errors }}
+        <textarea name="{{ form.content.name }}" id="{{ form.content.id_for_label }}"
+                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                  rows="4" placeholder="What are your thoughts?"></textarea>
+      </div>
+      <div class="flex justify-end">
+        <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors duration-300">
+          Post Comment
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- List of existing comments -->
+  <div class="space-y-6">
+    {% for comment in comments %}
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+        <!-- Comment Header: Avatar and Author -->
+        <div class="flex items-start mb-3">
+          <img src="{% static 'images/default-avatar.png' %}" alt="avatar" class="w-10 h-10 rounded-full object-cover mr-4">
+          <div class="flex-1">
+            <div class="flex items-center space-x-2 text-sm">
+              <span class="font-semibold text-gray-900">
+                @{{ comment.author|default:"Anonymous" }}
+              </span>
+              <span class="text-gray-500">• {{ comment.created_at|timesince }} ago</span>
+            </div>
+            <!-- Comment Content -->
+            <p class="text-gray-700 leading-relaxed mt-1">
+              {{ comment.content }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Comment Actions: Like, Dislike, and Counts -->
+        <div class="flex items-center space-x-6 text-gray-600 text-sm select-none pl-14">
+          <!-- Like Button -->
+          <button class="action-btn flex items-center hover:text-pink-600 transition" data-active-color="text-pink-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5A4.69 4.69 0 0012 6.75a4.69 4.69 0 00-4.312-3A4.69 4.69 0 003 8.25c0 7.203 9 12 9 12s9-4.797 9-12z" />
+            </svg>
+            <span>{{ comment.likes|default:0 }}</span>
+          </button>
+
+          <!-- Dislike Button -->
+          <button class="action-btn flex items-center hover:text-blue-600 transition" data-active-color="text-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.125 18.75h8.25a1.125 1.125 0 001.125-1.125v-6.75a1.125 1.125 0 00-1.125-1.125h-4.189l.513-2.462a.563.563 0 00-.551-.688H10.5a.563.563 0 00-.562.562v11.438a.563.563 0 00.563.563zM6 18.75H3.75a.75.75 0 01-.75-.75V10.5a.75.75 0 01.75-.75H6v9z" />
+            </svg>
+            <span>{{ comment.dislikes|default:0 }}</span>
+          </button>
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-center py-10 px-6 bg-gray-50 rounded-lg">
+        <p class="text-gray-500">No comments yet. Be the first to share your thoughts!</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Re-using the script from card_view for interactive buttons -->
+<script>
+document.querySelectorAll(".action-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const activeColor = btn.dataset.activeColor;
+    const svg = btn.querySelector("svg");
+    const isActive = btn.classList.toggle("active");
+
+    // Basic animation
+    svg.classList.add("scale-110");
+    setTimeout(() => svg.classList.remove("scale-110"), 150);
+
+    if (isActive) {
+      btn.classList.add(activeColor);
+      svg.setAttribute("fill", "currentColor");
+    } else {
+      btn.classList.remove(activeColor);
+      svg.setAttribute("fill", "none");
+    }
+  });
+});
+</script>
+{% endblock %}

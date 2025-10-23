@@ -5,8 +5,26 @@ from Post.models import ForumPost
 
 
 def show_comments(request, post_id):
-    comments = Comment.objects.filter(post__id=post_id).order_by("-created_at")
-    return render(request, "comments/comment_list.html", {"comments": comments})
+    post = get_object_or_404(ForumPost, id=post_id)
+    comments = Comment.objects.filter(post=post).order_by("-created_at")
+
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.author = request.user if request.user.is_authenticated else None
+            comment.save()
+            return redirect("show_comments", post_id=post.id)
+    else:
+        form = CommentForm()
+
+    context = {
+        "post": post,
+        "comments": comments,
+        "form": form,
+    }
+    return render(request, "comment_view.html", context)
 
 
 def add_comment(request, post_id):
