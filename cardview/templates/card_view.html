@@ -2,33 +2,29 @@
 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden w-full">
 
   <!-- Header -->
-  <div class="flex items-start p-5 pb-0 relative">
-
-    <!-- Tampilkan pinned📌 kalau post dipinned-->
-    <!-- Jujur yang ini tampilannya belum sempurna-->
-    {% if post.is_pinned %}
-    <div class="absolute top-3 right-3 flex items-center text-yellow-500 text-sm font-semibold">
-    📌 Pinned
-    </div>
-    {% endif %}
+  <div class="flex items-start p-5 pb-0">
 
     <!-- Avatar author-->
     <img src="{% static 'img/default-avatar.png' %}" alt="avatar"
          class="w-10 h-10 rounded-full object-cover mr-3">
 
+    
     <!-- Info judul, nama penulis, dan waktu posting -->
     <div class="flex-1">
-      <p class="text-sm font-semibold text-gray-800">{{ post.title }}</p>
+      <p class="text-sm font-bold text-gray-800">{{ post.author.name|default:"User Name" }}</p>
       <div class="flex items-center space-x-2 text-sm text-gray-500">
-        <span class="text-blue-500 font-medium">
-          @{{ post.author|default:"Anynomous" }}
+        <span class="text-blue-500 font-semibold">
+          @{{ post.author.username|default:"Anonymous" }}
         </span>
         <span>• {{ post.created_at|timesince }} ago</span>
       </div>
     </div>
+  </div>
 
   <!-- Body -->
   <div class="p-5">
+    <!-- Judul Postingan -->
+    <h2 class="text-lg font-bold text-gray-900 mb-2">{{ post.title }}</h2>
 
     <!-- Isi postingan (potongan 200 karakter pertama) -->
     <p class="text-gray-700 leading-relaxed mb-4">
@@ -47,7 +43,7 @@
     <!-- Jumlah likes dan comments -->
     <div class="text-sm text-gray-400 mb-3">
       <span>{{ post.likes|default:0 }} likes</span> • 
-      <span>{{ post.comments|default:0 }} comments</span>
+      <span>{{ post.comments.count|default:0 }} comments</span>
     </div>
 
     <hr class="border-gray-100 mb-3">
@@ -55,27 +51,29 @@
     <!-- Bagian button like, comment, dislike, save (bookmark), share -->
     <div class="flex justify-between text-gray-600 text-sm select-none">
       <div class="flex space-x-6">
-        <!-- Like -->
-        <button class="action-btn flex items-center hover:text-pink-600 transition" data-active-color="text-pink-600">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-               stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5A4.69 4.69 0 0012 6.75a4.69 4.69 0 00-4.312-3A4.69 4.69 0 003 8.25c0 7.203 9 12 9 12s9-4.797 9-12z" />
-          </svg>
-          Like
-        </button>
 
-        <!-- Dislike -->
-        <button class="action-btn flex items-center hover:text-blue-600 transition" data-active-color="text-blue-600">
+        <!--  Like -->
+        <button class="action-btn like-btn flex items-center hover:text-blue-600 transition" data-active-color="text-blue-600">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M10.125 18.75h8.25a1.125 1.125 0 001.125-1.125v-6.75a1.125 1.125 0 00-1.125-1.125h-4.189l.513-2.462a.563.563 0 00-.551-.688H10.5a.563.563 0 00-.562.562v11.438a.563.563 0 00.563.563zM6 18.75H3.75a.75.75 0 01-.75-.75V10.5a.75.75 0 01.75-.75H6v9z" />
           </svg>
+          Like
+        </button>
+
+        <!--  Dislike -->
+        <button class="action-btn dislike-btn flex items-center hover:text-red-500 transition" data-active-color="text-red-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               stroke-width="1.6" stroke="currentColor"
+               class="w-5 h-5 mr-1 transition-transform duration-150 rotate-180">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M13.875 18.75h-8.25a1.125 1.125 0 01-1.125-1.125v-6.75a1.125 1.125 0 011.125-1.125h4.189l-.513-2.462a.563.563 0 01.551-.688h3.213a.563.563 0 01.562.562v11.438a.563.563 0 01-.563.563zM18 18.75h2.25a.75.75 0 00.75-.75V10.5a.75.75 0 00-.75-.75H18v9z" />
+          </svg>
           Dislike
         </button>
 
-        <!-- Comment -->
+        <!--  Comment -->
         <button class="action-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
@@ -87,7 +85,7 @@
       </div>
 
       <div class="flex space-x-6">
-        <!-- Bookmark -->
+        <!--  Bookmark -->
         <button class="action-btn flex items-center hover:text-yellow-500 transition" data-active-color="text-yellow-500">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
@@ -97,7 +95,7 @@
           Save
         </button>
 
-        <!-- Share -->
+        <!--  Share -->
         <button class="action-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                stroke-width="1.8" stroke="currentColor" class="w-5 h-5 mr-1 transition-transform duration-150">
@@ -111,11 +109,30 @@
         </button>
       </div>
     </div>
+
+    <!-- Isi Komen -->
+    <div class="mt-4 border-t pt-3">
+      <p class="font-semibold text-gray-800 mb-2">Comments</p>
+      {% if post.comments.exists %}
+        {% for comment in post.comments.all %}
+          <div class="flex items-start mb-3">
+            <img src="https://placehold.co/40x40" alt="avatar" class="w-9 h-9 rounded-lg object-cover mr-3">
+            <div>
+              <p class="text-sm text-gray-700 font-semibold">
+                @{{ comment.author.username }}
+                <span class="text-gray-400 text-xs">• {{ comment.created_at|timesince }} ago</span>
+              </p>
+              <p class="text-gray-600 text-sm">{{ comment.text }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-gray-400 text-sm italic">No comments yet.</p>
+      {% endif %}
+    </div>
   </div>
 </div>
 
-<!-- Bagian script supaya saat klik ada efek warna berubah -->
-<!-- Bagian ini juga belum sempurna -->
 <script>
 document.querySelectorAll(".action-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -140,8 +157,7 @@ document.querySelectorAll(".action-btn").forEach(btn => {
       const dislikeBtn = btn.closest('.flex').querySelector('.dislike-btn');
       if (dislikeBtn && dislikeBtn.classList.contains("active")) {
         dislikeBtn.classList.remove("active", dislikeBtn.dataset.activeColor);
-        const dislikeSvg = dislikeBtn.querySelector("svg");
-        dislikeSvg.setAttribute("fill", "none");
+        dislikeBtn.querySelector("svg").setAttribute("fill", "none");
       }
     }
     if (btn.classList.contains("dislike-btn") && isActive) {
@@ -149,8 +165,7 @@ document.querySelectorAll(".action-btn").forEach(btn => {
       const likeBtn = btn.closest('.flex').querySelector('.like-btn');
       if (likeBtn && likeBtn.classList.contains("active")) {
         likeBtn.classList.remove("active", likeBtn.dataset.activeColor);
-        const likeSvg = likeBtn.querySelector("svg");
-        likeSvg.setAttribute("fill", "none");
+        likeBtn.querySelector("svg").setAttribute("fill", "none");
       }
     }
   });
