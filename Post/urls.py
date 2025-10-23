@@ -1,8 +1,6 @@
 from django.urls import path
 from . import views
 
-app_name = 'forum'
-
 urlpatterns = [
     # ==================== POST CRUD URLS ====================
     path('', views.forum_post_list, name='forum_post_list'),

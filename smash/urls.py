@@ -17,8 +17,16 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-
+    # Include app URLs
+    path("", include("homepage.urls")),
+    path("accounts/", include("account.urls")),
+    path("forum/", include("Post.urls")),
+    path("report/", include("Report.urls")),
+    path("ads/", include("ads.urls")),
+    path("", include("Comment.urls")),
 ]
