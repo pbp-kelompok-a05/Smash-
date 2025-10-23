@@ -19,6 +19,7 @@ class ReportAdmin(admin.ModelAdmin):
         'status', 
         'reason', 
         'created_at',
+        
         'resolved_at'
     ]
     

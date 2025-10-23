@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
 import json
 
+# import models dan forms yang sudah dibuat pada modul Post
 from .models import ForumPost, Category, PostLike
 from .forms import ForumPostForm
 
