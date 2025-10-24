@@ -1,136 +1,105 @@
+# report/models.py
+from datetime import timezone
 from django.db import models
-from django.contrib.auth.models import User
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class Report(models.Model):
-    # Status choices
-    # Ide : Aplikasi web nantinya tidak akan secara langsung mengkonfirmasi laporan yang masuk, tetapi akan mengeceknya terlebih dahuku
-    STATUS_PENDING = 'pending'
-    STATUS_UNDER_REVIEW = 'under_review'
-    STATUS_RESOLVED = 'resolved'
-    STATUS_REJECTED = 'rejected'
-    
-    # List kategori status laporan dikonfirmasi oleh web (akan di set oleh admin)
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_UNDER_REVIEW, 'Under Review'),
-        (STATUS_RESOLVED, 'Resolved'),
-        (STATUS_REJECTED, 'Rejected'),
-    ]
-    
-    # Reason categories
-    # Ide : Aplikasi web nantinya akan menyediakan pilihan atau alasan laporan tersebut dibuat oleh user
-    # Ide tambahannya, user dapat memasukkan alasan spesifik kenapa laporan tersebut diajukan 
-    REASON_SPAM = 'spam'
-    REASON_HARASSMENT = 'harassment'
-    REASON_INAPPROPRIATE = 'inappropriate'
-    REASON_OTHER = 'other'
-    
-    # List untuk pilihan alasan laporan dibuat
-    REASON_CHOICES = [
-        (REASON_SPAM, 'Spam atau iklan'),
-        (REASON_HARASSMENT, 'Pelecehan atau bullying'),
-        (REASON_INAPPROPRIATE, 'Konten tidak pantas'),
-        (REASON_OTHER, 'Lainnya'),
+    """
+    Model untuk menyimpan laporan konten tidak pantas.
+    Superuser dapat mengelola semua laporan.
+    """
+    REPORT_CATEGORIES = [
+        ('SARA', 'Konten SARA'),
+        ('SPAM', 'Spam'),
+        ('NSFW', 'Konten Tidak Senonoh'),
+        ('OTHER', 'Lainnya'),
     ]
 
-    # Reporter information
-    # Mengambil identitas dari user yang membuat laporan 
-    # ON DELETE CASCADE berfungsi agar ketika objek dihapus, maka objek terkait akan dihapus secara otomatis sehingga tidak melanggar referential integrity
+    STATUS_CHOICES = [
+        ('PENDING', 'Menunggu Review'),
+        ('REVIEWED', 'Ditinjau'),
+        ('RESOLVED', 'Selesai'),
+    ]
+
     reporter = models.ForeignKey(
-        User, 
+        User,
         on_delete=models.CASCADE,
-        related_name='reports_made',
-        verbose_name='Pelapor'
+        verbose_name="Pelapor",
+        related_name="reports_made"
     )
-    
-    # Generic foreign key untuk konten yang dilaporkan
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    reported_object = GenericForeignKey('content_type', 'object_id')
-    
-    # Report details    
-    reason = models.CharField(
-        max_length=20,
-        choices=REASON_CHOICES,
-        default=REASON_OTHER,
-        verbose_name='Alasan Pelaporan'
-    )
-    
-    description = models.TextField(
-        blank=True,
+    post = models.ForeignKey(
+        'post.Post',
+        on_delete=models.CASCADE,
         null=True,
-        verbose_name='Deskripsi Tambahan',
-        help_text='Jelaskan secara detail mengapa konten ini dilaporkan'
+        blank=True,
+        verbose_name="Post Dilaporkan",
+        related_name="reports"
     )
-    
-    # Status and tracking
+    comment = models.ForeignKey(
+        'comment.Comment',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Komentar Dilaporkan",
+        related_name="reports"
+    )
+    category = models.CharField(
+        max_length=10,
+        choices=REPORT_CATEGORIES,
+        verbose_name="Kategori Laporan"
+    )
+    description = models.TextField(
+        max_length=500,
+        blank=True,
+        verbose_name="Deskripsi Tambahan"
+    )
     status = models.CharField(
-        max_length=20,
+        max_length=10,
         choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-        verbose_name='Status Laporan'
+        default='PENDING',
+        verbose_name="Status Laporan"
     )
-    
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Dibuat Pada'
+        verbose_name="Waktu Dilaporkan"
     )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='Diperbarui Pada'
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Waktu Ditinjau"
     )
-    
-    # Admin/moderation fields
-    resolved_by = models.ForeignKey(
+    reviewed_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='reports_resolved',
-        verbose_name='Diselesaikan Oleh'
-    )
-    
-    resolved_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='Diselesaikan Pada'
-    )
-    
-    admin_notes = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name='Catatan Admin',
-        help_text='Catatan internal untuk moderator'
+        verbose_name="Ditinjau Oleh",
+        related_name="reports_reviewed"
     )
 
     class Meta:
-        verbose_name = 'Laporan'
-        verbose_name_plural = 'Laporan'
+        verbose_name = "Laporan"
+        verbose_name_plural = "Laporan"
         ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['content_type', 'object_id']),
-            models.Index(fields=['status', 'created_at']),
+        permissions = [
+            ("manage_all_reports", "Can manage all reports"),  # Hak akses superuser
         ]
 
     def __str__(self):
-        return f"Laporan oleh {self.reporter.username} - {self.get_status_display()}"
+        return f"Laporan {self.category} oleh {self.reporter.username}"
+
+    def clean(self):
+        """Validasi: Laporan harus terkait post ATAU komentar"""
+        from django.core.exceptions import ValidationError
+        if not self.post and not self.comment:
+            raise ValidationError("Laporan harus terkait dengan post atau komentar.")
+        if self.post and self.comment:
+            raise ValidationError("Laporan hanya boleh terkait satu jenis konten.")
 
     def save(self, *args, **kwargs):
-        # Auto-update resolved_at when status changes to resolved
-        if self.status == self.STATUS_RESOLVED and not self.resolved_at:
-            self.resolved_at = timezone.now()
-        elif self.status != self.STATUS_RESOLVED:
-            self.resolved_at = None            
+        """Catat waktu review saat status berubah"""
+        if self.status == 'REVIEWED' and not self.reviewed_at:
+            self.reviewed_at = timezone.now()
         super().save(*args, **kwargs)
-
-    def get_reported_content_type(self):
-        """Mendapatkan tipe konten yang dilaporkan"""
-        return self.content_type.model_class()._meta.verbose_name.title()
-
-    def is_resolved(self):
-        """Cek apakah laporan sudah diselesaikan"""
-        return self.status in [self.STATUS_RESOLVED, self.STATUS_REJECTED]

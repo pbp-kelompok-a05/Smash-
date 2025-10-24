@@ -1,417 +1,339 @@
-# Import library yang dibutuhkan 
-import uuid
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.core import serializers
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+# post/views.py
+import json
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
-import json
+from django.contrib.auth import get_user_model
+from .models import Post
+from comment.models import Comment
+from report.models import Report
 
-from .models import ForumPost, Category, PostLike
-from .forms import ForumPostForm
+User = get_user_model()
 
-# ==================== AUTHENTICATION VIEWS ====================
+class PostAPIView(View):
+    """
+    API View untuk handling CRUD operations pada Post.
+    Mendukung AJAX requests dan superuser permissions.
+    """
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch untuk handle AJAX requests"""
+        return super().dispatch(request, *args, **kwargs)
 
-# ==================== POST CRUD VIEWS ====================
+    def get_user_permissions(self, user, post=None):
+        """Helper method untuk check user permissions"""
+        is_owner = post and post.user == user if post else False
+        is_superuser = user.is_superuser or user.has_perm('post.manage_all_posts')
+        return is_owner, is_superuser
 
-def forum_post_list(request):
-    """Menampilkan semua post forum dengan filter dan pencarian"""
-    posts = ForumPost.objects.filter(is_deleted=False).order_by('-is_pinned', '-created_at')
-    
-    # Filter berdasarkan tipe post
-    post_type_filter = request.GET.get('post_type', '')
-    if post_type_filter:
-        posts = posts.filter(post_type=post_type_filter)
-    
-    # Filter berdasarkan kategori
-    category_filter = request.GET.get('category', '')
-    if category_filter:
-        posts = posts.filter(category_id=category_filter)
-    
-    # Pencarian berdasarkan judul atau konten
-    search_query = request.GET.get('search', '')
-    if search_query:
-        posts = posts.filter(
-            Q(title__icontains=search_query) | 
-            Q(content__icontains=search_query)
-        )
-    
-    # Statistik untuk template
-    total_posts = posts.count()
-    popular_posts = ForumPost.objects.filter(is_deleted=False).order_by('-views')[:5]
-    
-    # Context untuk post 
-    context = {
-        'posts': posts,
-        'post_types': ForumPost.POST_CATEGORY,
-        'categories': Category.objects.all(),
-        'selected_post_type': post_type_filter,
-        'selected_category': category_filter,
-        'search_query': search_query,
-        'total_posts': total_posts,
-        'popular_posts': popular_posts,
-    }
-    return render(request, 'forum/post_list.html', context)
-
-def forum_post_detail(request, pk):
-    """Menampilkan detail post dan increment views"""
-    try:
-        # Untuk admin, tampilkan semua post termasuk yang dihapus
-        if request.user.is_superuser:
-            post = get_object_or_404(ForumPost, id=pk)
-        else:
-            post = get_object_or_404(ForumPost, id=pk, is_deleted=False)
-    except:
-        messages.error(request, 'Post tidak ditemukan atau telah dihapus.')
-        return redirect('forum_post_list')
-    
-    # Increment views count
-    post.increment_views()
-    
-    # Get related posts (same category)
-    related_posts = ForumPost.objects.filter(
-        category=post.category,
-        is_deleted=False
-    ).exclude(id=pk).order_by('-created_at')[:3]
-    
-    # Check if user has liked/disliked this post
-    user_like = None
-    if request.user.is_authenticated:
+    def get(self, request, post_id=None):
+        """
+        GET: Retrieve single post atau list of posts
+        AJAX Support: ✅
+        """
         try:
-            user_like = PostLike.objects.get(post=post, user=request.user)
-        except PostLike.DoesNotExist:
-            pass
-    
-    context = {
-        'post': post,
-        'related_posts': related_posts,
-        'user_like': user_like,
-        'likes_count': post.get_likes_count(),
-        'dislikes_count': post.get_dislikes_count(),
-        'comment_count': post.get_comment_count(),
-    }
-    return render(request, 'forum/post_detail.html', context)
+            if post_id:
+                # Get single post
+                post = Post.objects.get(id=post_id, is_deleted=False)
+                
+                # Check jika user memiliki akses
+                if post.is_deleted and not self.get_user_permissions(request.user, post)[1]:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Post tidak ditemukan atau telah dihapus'
+                    }, status=404)
+                
+                post_data = {
+                    'id': post.id,
+                    'title': post.title,
+                    'content': post.content,
+                    'image': post.image.url if post.image else None,
+                    'video_link': post.video_link,
+                    'user': post.user.username,
+                    'user_id': post.user.id,
+                    'created_at': post.created_at.isoformat(),
+                    'updated_at': post.updated_at.isoformat(),
+                    'comment_count': post.comments.filter(is_deleted=False).count(),
+                    'can_edit': self.get_user_permissions(request.user, post)[0] or 
+                               self.get_user_permissions(request.user, post)[1]
+                }
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'post': post_data
+                })
+            
+            else:
+                # Get list of posts dengan pagination
+                page = int(request.GET.get('page', 1))
+                per_page = int(request.GET.get('per_page', 10))
+                start = (page - 1) * per_page
+                end = start + per_page
+                
+                # Filter posts (superuser bisa lihat semua, user biasa hanya yang tidak deleted)
+                if request.user.is_authenticated and self.get_user_permissions(request.user)[1]:
+                    posts = Post.objects.all()
+                else:
+                    posts = Post.objects.filter(is_deleted=False)
+                
+                # Apply ordering
+                sort_by = request.GET.get('sort_by', '-created_at')
+                posts = posts.order_by(sort_by)
+                
+                posts_data = []
+                for post in posts[start:end]:
+                    posts_data.append({
+                        'id': post.id,
+                        'title': post.title,
+                        'content_preview': post.content[:100] + '...' if len(post.content) > 100 else post.content,
+                        'image': post.image.url if post.image else None,
+                        'video_link': post.video_link,
+                        'user': post.user.username,
+                        'created_at': post.created_at.isoformat(),
+                        'comment_count': post.comments.filter(is_deleted=False).count(),
+                        'can_edit': self.get_user_permissions(request.user, post)[0] or 
+                                   self.get_user_permissions(request.user, post)[1]
+                    })
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'posts': posts_data,
+                    'pagination': {
+                        'page': page,
+                        'per_page': per_page,
+                        'total': posts.count(),
+                        'has_next': end < posts.count()
+                    }
+                })
+                
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error retrieving post: {str(e)}'
+            }, status=500)
 
-@login_required
-def create_forum_post(request):
-    """Membuat post forum baru"""
-    if request.method == "POST":
-        form = ForumPostForm(request.POST, request.FILES)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
+    @method_decorator(require_http_methods(["POST"]))
+    def post(self, request):
+        """
+        POST: Create new post
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            data = json.loads(request.body)
+            
+            # Validasi required fields
+            required_fields = ['title', 'content']
+            for field in required_fields:
+                if not data.get(field):
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Field {field} harus diisi'
+                    }, status=400)
+            
+            # Create post
+            post = Post.objects.create(
+                user=request.user,
+                title=data['title'],
+                content=data['content'],
+                video_link=data.get('video_link', '')
+            )
+            
+            # Handle image upload jika ada
+            if request.FILES.get('image'):
+                post.image = request.FILES['image']
+                post.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Post berhasil dibuat',
+                'post_id': post.id
+            }, status=201)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON format'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error creating post: {str(e)}'
+            }, status=500)
+
+    @method_decorator(require_http_methods(["PUT"]))
+    def put(self, request, post_id):
+        """
+        PUT: Update existing post
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            post = Post.objects.get(id=post_id)
+            is_owner, is_superuser = self.get_user_permissions(request.user, post)
+            
+            if not (is_owner or is_superuser):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Anda tidak memiliki izin untuk mengedit post ini'
+                }, status=403)
+            
+            data = json.loads(request.body)
+            
+            # Update fields
+            update_fields = ['title', 'content', 'video_link']
+            for field in update_fields:
+                if field in data:
+                    setattr(post, field, data[field])
+            
+            # Handle image update
+            if request.FILES.get('image'):
+                post.image = request.FILES['image']
+            
             post.save()
-            messages.success(request, 'Post berhasil dibuat!')
-            return redirect('forum_post_detail', pk=post.id)
-        else:
-            messages.error(request, 'Terjadi kesalahan. Silakan periksa form Anda.')
-    else:
-        form = ForumPostForm()
-    
-    return render(request, 'forum/post_form.html', {
-        'form': form,
-        'title': 'Buat Post Baru'
-    })
-
-@login_required
-def update_forum_post(request, pk):
-    """Update post forum"""
-    try:
-        post = get_object_or_404(ForumPost, id=pk)
-        
-        # Cek apakah user adalah author atau superuser
-        if post.author != request.user and not request.user.is_superuser:
-            messages.error(request, 'Anda tidak memiliki izin untuk mengedit post ini.')
-            return redirect('forum_post_detail', pk=pk)
-        
-        if request.method == "POST":
-            form = ForumPostForm(request.POST, request.FILES, instance=post)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Post berhasil diupdate!')
-                return redirect('forum_post_detail', pk=post.id)
-            else:
-                messages.error(request, 'Terjadi kesalahan. Silakan periksa form Anda.')
-        else:
-            form = ForumPostForm(instance=post)
-        
-        return render(request, 'forum/post_form.html', {
-            'form': form,
-            'title': 'Edit Post',
-            'post': post
-        })
-    except:
-        messages.error(request, 'Post tidak ditemukan.')
-        return redirect('forum_post_list')
-
-@login_required
-def delete_forum_post(request, pk):
-    """Hapus post forum (soft delete)"""
-    try:
-        post = get_object_or_404(ForumPost, id=pk)
-        
-        # Cek apakah user adalah author atau superuser
-        if post.author != request.user and not request.user.is_superuser:
-            messages.error(request, 'Anda tidak memiliki izin untuk menghapus post ini.')
-            return redirect('forum_post_detail', pk=pk)
-        
-        if request.method == "POST":
-            post.soft_delete()
-            messages.success(request, 'Post berhasil dihapus!')
-            return redirect('forum_post_list')
-        
-        return render(request, 'forum/post_confirm_delete.html', {'post': post})
-    except:
-        messages.error(request, 'Post tidak ditemukan.')
-        return redirect('forum_post_list')
-
-# ==================== POST INTERACTION VIEWS ====================
-
-@login_required
-@csrf_exempt
-@require_http_methods(["POST"])
-def like_post(request, pk):
-    """Like sebuah post menggunakan model PostLike"""
-    try:
-        post = get_object_or_404(ForumPost, id=pk, is_deleted=False)
-        user = request.user
-        
-        # Cek apakah user sudah memberikan like/dislike sebelumnya
-        try:
-            post_like = PostLike.objects.get(post=post, user=user)
-            if post_like.is_like:
-                # Jika sudah like, hapus like (unlike)
-                post_like.delete()
-                action = 'unlike'
-            else:
-                # Jika sebelumnya dislike, ubah menjadi like
-                post_like.is_like = True
-                post_like.save()
-                action = 'changed_to_like'
-        except PostLike.DoesNotExist:
-            # Jika belum, buat like baru
-            PostLike.objects.create(post=post, user=user, is_like=True)
-            action = 'like'
-        
-        likes_count = post.get_likes_count()
-        dislikes_count = post.get_dislikes_count()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            
             return JsonResponse({
                 'status': 'success',
-                'action': action,
-                'likes_count': likes_count,
-                'dislikes_count': dislikes_count
+                'message': 'Post berhasil diupdate',
+                'post_id': post.id
             })
-        
-        messages.success(request, 'Post telah dilike!')
-        return redirect('forum_post_detail', pk=pk)
-        
-    except ForumPost.DoesNotExist:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'error', 'message': 'Post tidak ditemukan'}, status=404)
-        messages.error(request, 'Post tidak ditemukan.')
-        return redirect('forum_post_list')
+            
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error updating post: {str(e)}'
+            }, status=500)
 
-@login_required
-@csrf_exempt
-@require_http_methods(["POST"])
-def dislike_post(request, pk):
-    """Dislike sebuah post menggunakan model PostLike"""
-    try:
-        post = get_object_or_404(ForumPost, id=pk, is_deleted=False)
-        user = request.user
-        
-        # Cek apakah user sudah memberikan like/dislike sebelumnya
+    @method_decorator(require_http_methods(["DELETE"]))
+    def delete(self, request, post_id):
+        """
+        DELETE: Soft delete post
+        AJAX Support: ✅
+        """
         try:
-            post_like = PostLike.objects.get(post=post, user=user)
-            if not post_like.is_like:
-                # Jika sudah dislike, hapus dislike (undislike)
-                post_like.delete()
-                action = 'undislike'
-            else:
-                # Jika sebelumnya like, ubah menjadi dislike
-                post_like.is_like = False
-                post_like.save()
-                action = 'changed_to_dislike'
-        except PostLike.DoesNotExist:
-            # Jika belum, buat dislike baru
-            PostLike.objects.create(post=post, user=user, is_like=False)
-            action = 'dislike'
-        
-        likes_count = post.get_likes_count()
-        dislikes_count = post.get_dislikes_count()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            post = Post.objects.get(id=post_id)
+            is_owner, is_superuser = self.get_user_permissions(request.user, post)
+            
+            if not (is_owner or is_superuser):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Anda tidak memiliki izin untuk menghapus post ini'
+                }, status=403)
+            
+            # Soft delete
+            post.delete()
+            
             return JsonResponse({
                 'status': 'success',
-                'action': action,
-                'likes_count': likes_count,
-                'dislikes_count': dislikes_count
+                'message': 'Post berhasil dihapus'
             })
-        
-        messages.info(request, 'Post telah didislike!')
-        return redirect('forum_post_detail', pk=pk)
-        
-    except ForumPost.DoesNotExist:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'error', 'message': 'Post tidak ditemukan'}, status=404)
-        messages.error(request, 'Post tidak ditemukan.')
-        return redirect('forum_post_list')
+            
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error deleting post: {str(e)}'
+            }, status=500)
 
-@login_required
-@require_http_methods(["POST"])
-def pin_post(request, pk):
-    """Pin post (hanya untuk superuser/staff)"""
-    if not request.user.is_superuser and not request.user.is_staff:
-        messages.error(request, 'Hanya admin yang bisa memin post!')
-        return redirect('forum_post_detail', pk=pk)
-    
-    try:
-        post = get_object_or_404(ForumPost, id=pk)
-        post.pin()
-        messages.success(request, 'Post telah dipin!')
-    except:
-        messages.error(request, 'Post tidak ditemukan.')
-    
-    return redirect('forum_post_detail', pk=pk)
 
-@login_required
-@require_http_methods(["POST"])
-def unpin_post(request, pk):
-    """Unpin post (hanya untuk superuser/staff)"""
-    if not request.user.is_superuser and not request.user.is_staff:
-        messages.error(request, 'Hanya admin yang bisa unpin post!')
-        return redirect('forum_post_detail', pk=pk)
+class PostInteractionView(View):
+    """
+    View untuk handling post interactions (like, share, report)
+    Mendukung AJAX requests.
+    """
     
-    try:
-        post = get_object_or_404(ForumPost, id=pk)
-        post.unpin()
-        messages.info(request, 'Post telah diunpin!')
-    except:
-        messages.error(request, 'Post tidak ditemukan.')
-    
-    return redirect('forum_post_detail', pk=pk)
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
-# ==================== USER-SPECIFIC VIEWS ====================
-
-@login_required
-def my_posts(request):
-    """Menampilkan post milik user yang login"""
-    posts = ForumPost.objects.filter(author=request.user, is_deleted=False).order_by('-created_at')
-    
-    context = {
-        'posts': posts,
-        'title': 'Post Saya'
-    }
-    return render(request, 'forum/post_list.html', context)
-
-@login_required
-def my_pinned_posts(request):
-    """Menampilkan post yang dipin (untuk admin)"""
-    if not request.user.is_superuser and not request.user.is_staff:
-        messages.error(request, 'Hanya admin yang bisa mengakses halaman ini!')
-        return redirect('forum_post_list')
-    
-    posts = ForumPost.objects.filter(is_pinned=True, is_deleted=False).order_by('-created_at')
-    
-    context = {
-        'posts': posts,
-        'title': 'Post yang Dipin'
-    }
-    return render(request, 'forum/post_list.html', context)
-
-# ==================== API VIEWS (JSON/XML) ====================
-
-def show_forum_json(request):
-    """Mengembalikan semua post forum dalam format JSON"""
-    post_list = ForumPost.objects.filter(is_deleted=False).order_by('-created_at')
-    json_data = serializers.serialize("json", post_list)
-    return HttpResponse(json_data, content_type="application/json")
-
-def show_forum_xml(request):
-    """Mengembalikan semua post forum dalam format XML"""
-    post_list = ForumPost.objects.filter(is_deleted=False).order_by('-created_at')
-    xml_data = serializers.serialize("xml", post_list)
-    return HttpResponse(xml_data, content_type="application/xml")
-
-def show_forum_json_by_id(request, pk):
-    """Mengembalikan post forum tertentu dalam format JSON"""
-    try:
-        post = ForumPost.objects.get(id=pk, is_deleted=False)
-        json_data = serializers.serialize("json", [post])
-        return HttpResponse(json_data, content_type="application/json")
-    except ForumPost.DoesNotExist:
-        return JsonResponse({'error': 'Post tidak ditemukan'}, status=404)
-
-def show_forum_xml_by_id(request, pk):
-    """Mengembalikan post forum tertentu dalam format XML"""
-    try:
-        post = ForumPost.objects.get(id=pk, is_deleted=False)
-        xml_data = serializers.serialize("xml", [post])
-        return HttpResponse(xml_data, content_type="application/xml")
-    except ForumPost.DoesNotExist:
-        return JsonResponse({'error': 'Post tidak ditemukan'}, status=404)
-
-def show_forum_json_by_category(request, category_id):
-    """Mengembalikan post forum berdasarkan kategori dalam format JSON"""
-    post_list = ForumPost.objects.filter(category_id=category_id, is_deleted=False).order_by('-created_at')
-    json_data = serializers.serialize("json", post_list)
-    return HttpResponse(json_data, content_type="application/json")
-
-# ==================== STATISTICS VIEWS ====================
-
-def forum_statistics(request):
-    """Menampilkan statistik forum"""
-    total_posts = ForumPost.objects.filter(is_deleted=False).count()
-    total_views = ForumPost.objects.filter(is_deleted=False).aggregate(total_views=Count('views'))['total_views'] or 0
-    
-    # Total likes dan dislikes dari model PostLike
-    total_likes = PostLike.objects.filter(is_like=True).count()
-    total_dislikes = PostLike.objects.filter(is_like=False).count()
-    
-    # Posts per category
-    categories_data = []
-    for category in Category.objects.all():
-        count = ForumPost.objects.filter(category=category, is_deleted=False).count()
-        categories_data.append({
-            'name': category.name,
-            'id': category.id,
-            'count': count
-        })
-    
-    # Posts per post type
-    post_types_data = []
-    for post_type_code, post_type_name in ForumPost.POST_CATEGORY:
-        count = ForumPost.objects.filter(post_type=post_type_code, is_deleted=False).count()
-        post_types_data.append({
-            'name': post_type_name,
-            'code': post_type_code,
-            'count': count
-        })
-    
-    # Most popular posts
-    popular_posts = ForumPost.objects.filter(is_deleted=False).order_by('-views')[:10]
-    
-    # Most liked posts (berdasarkan PostLike)
-    most_liked_posts = ForumPost.objects.filter(is_deleted=False).annotate(
-        like_count=Count('likes', filter=Q(likes__is_like=True))
-    ).order_by('-like_count')[:10]
-    
-    context = {
-        'total_posts': total_posts,
-        'total_views': total_views,
-        'total_likes': total_likes,
-        'total_dislikes': total_dislikes,
-        'categories_data': categories_data,
-        'post_types_data': post_types_data,
-        'popular_posts': popular_posts,
-        'most_liked_posts': most_liked_posts,
-    }
-    return render(request, 'forum/statistics.html', context)
+    @method_decorator(require_http_methods(["POST"]))
+    def post(self, request, post_id, action):
+        """
+        POST: Handle post interactions (like, share, report)
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            post = Post.objects.get(id=post_id, is_deleted=False)
+            data = json.loads(request.body) if request.body else {}
+            
+            if action == 'report':
+                # Handle report action
+                report = Report.objects.create(
+                    reporter=request.user,
+                    post=post,
+                    category=data.get('category', 'OTHER'),
+                    description=data.get('description', '')
+                )
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Post berhasil dilaporkan',
+                    'report_id': report.id
+                })
+            
+            elif action == 'share':
+                # Handle share action (simulasi)
+                share_count = data.get('share_count', 0) + 1
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Post berhasil dibagikan',
+                    'share_count': share_count
+                })
+            
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Action tidak valid'
+                }, status=400)
+                
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error processing action: {str(e)}'
+            }, status=500)
