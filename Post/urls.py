@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'forum'
+
 urlpatterns = [
     # ==================== POST CRUD URLS ====================
     path('', views.forum_post_list, name='forum_post_list'),
@@ -18,7 +20,6 @@ urlpatterns = [
     # ==================== USER-SPECIFIC URLS ====================
     path('my-posts/', views.my_posts, name='my_posts'),
     path('pinned-posts/', views.my_pinned_posts, name='my_pinned_posts'),
-    path('user-activity/', views.user_activity, name='user_activity'),
     
     # ==================== API URLS (JSON/XML) ====================
     path('api/posts/', views.show_forum_json, name='show_forum_json'),
@@ -26,7 +27,4 @@ urlpatterns = [
     path('api/posts/<uuid:pk>/', views.show_forum_json_by_id, name='show_forum_json_by_id'),
     path('api/posts/<uuid:pk>/xml/', views.show_forum_xml_by_id, name='show_forum_xml_by_id'),
     path('api/posts/category/<int:category_id>/', views.show_forum_json_by_category, name='show_forum_json_by_category'),
-    
-    # ==================== STATISTICS & ANALYTICS URLS ====================
-    path('statistics/', views.forum_statistics, name='forum_statistics'),
 ]
