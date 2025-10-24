@@ -28,6 +28,20 @@ urlpatterns = [
     path("", include("post.urls")),        
     path("comments/", include("comment.urls")),
     path("reports/", include("report.urls")),
+<<<<<<< HEAD
+=======
+    path("profil/", include("profil.urls")),
+    path("ads/", include("ads.urls")),
+    # optional: fallback redirect dari /accounts/login/ -> named 'login'
+    path(
+        "accounts/login/", RedirectView.as_view(pattern_name="login", permanent=False)
+    ),
+    path(
+        "accounts/register/",
+        RedirectView.as_view(pattern_name="register", permanent=False),
+    ),
+]
+>>>>>>> 7fd9d25c65ed60ac04b01b4fc4b196663a5054c8
 
     # optional: fallback redirect dari /accounts/login/ -> named 'login'
     path("accounts/login/", RedirectView.as_view(pattern_name="login", permanent=False)),

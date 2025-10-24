@@ -110,13 +110,11 @@ function displayPageSection({ showLoading = false, showError = false, showEmpty 
 // Create news card element
 function buildPostCardElement(item) {
   // --- sanitise semua input ---
-  const linkDetail = `{% url 'main:show_post' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.id);
+  const linkDetail = `{% url 'post:user/post/' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.id);
   const id         = DOMPurify.sanitize(item.id);
   const title      = DOMPurify.sanitize(item.title);
   const content    = DOMPurify.sanitize(item.content);
   const image      = DOMPurify.sanitize(item.image || '');
-  const likeCount  = Number(item.like) || 0;
-  const commentCnt = Number(item.comment) || 0;
   const createdAt  = new Date(item.created_at).toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -151,11 +149,6 @@ function buildPostCardElement(item) {
       </p>
 
       ${image ? `<img src="${image}" alt="${title}" class="rounded-xl w-full object-cover mb-4 transition-transform duration-300 hover:scale-[1.02]">` : ''}
-
-      <div class="text-sm text-gray-400 mb-3">
-        <span>${likeCount} likes</span> • 
-        <span>${commentCnt} comments</span>
-      </div>
 
       <hr class="border-gray-100 mb-3">
 
@@ -248,10 +241,10 @@ function filterAndDisplayPost() {
     filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
   }
   else if(activeFilter=== 'bookmark'){
-    filteredPost= allPostData.filter(post => post.is_bookmark === true)
+    filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
   }
   else if (activeFilter === 'liked'){
-    filteredPost= allLikedPost.filter(post => post.is_like === true)
+    filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
   }
   if (filteredPost.length === 0) {
     displayPageSection({ showEmpty: true });
