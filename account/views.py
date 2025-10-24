@@ -3,8 +3,10 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.http import JsonResponse
 from django.shortcuts import render
 
+
 def login_register_view(request):
-    return render(request, "accounts/login_register.html")
+    return render(request, "login_register.html")
+
 
 def register_ajax(request):
     if request.method == "POST":
@@ -16,6 +18,7 @@ def register_ajax(request):
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
     return JsonResponse({"error": "Invalid method"}, status=405)
 
+
 def login_ajax(request):
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
@@ -25,6 +28,7 @@ def login_ajax(request):
             return JsonResponse({"success": True, "username": user.username})
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
     return JsonResponse({"error": "Invalid method"}, status=405)
+
 
 def logout_ajax(request):
     if request.method == "POST":
