@@ -202,6 +202,100 @@
 
       const csrftoken = getCookie('csrftoken');
 
+      // Modal functionality
+      const modal = document.getElementById('create-post-modal');
+      const createPostBtn = document.getElementById('create-post-btn');
+      const closeModalBtn = document.getElementById('close-modal');
+      const cancelPostBtn = document.getElementById('cancel-post');
+      const modalBackdrop = document.getElementById('modal-backdrop');
+      const createPostForm = document.getElementById('create-post-form');
+      const formMessages = document.getElementById('form-messages');
+
+      function showModal() {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function hideModal() {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        createPostForm.reset();
+        formMessages.classList.add('hidden');
+      }
+
+      function showMessage(message, type) {
+        formMessages.innerHTML = `<div class="p-3 rounded-lg ${type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">${message}</div>`;
+        formMessages.classList.remove('hidden');
+      }
+
+      // Event listeners for modal
+      createPostBtn.addEventListener('click', showModal);
+      closeModalBtn.addEventListener('click', hideModal);
+      cancelPostBtn.addEventListener('click', hideModal);
+      modalBackdrop.addEventListener('click', hideModal);
+
+      // Handle form submission
+      createPostForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submit-post');
+        const spinner = document.getElementById('submit-spinner');
+        const originalText = submitBtn.innerHTML;
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        submitBtn.innerHTML = '<span>Creating...</span>';
+        
+        try {
+          const formData = new FormData(this);
+          
+          // Create JSON data for non-file fields
+          const jsonData = {
+            title: formData.get('title'),
+            content: formData.get('content'),
+            video_link: formData.get('video_link') || ''
+          };
+          
+          // Create new FormData for the request
+          const requestData = new FormData();
+          requestData.append('data', JSON.stringify(jsonData));
+          
+          const imageFile = document.getElementById('post-image').files[0];
+          if (imageFile) {
+            requestData.append('image', imageFile);
+          }
+          
+          const response = await fetch('/post/', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrftoken,
+            },
+            body: requestData
+          });
+          
+          const data = await response.json();
+          
+          if (data.status === 'success') {
+            showMessage('Post created successfully!', 'success');
+            setTimeout(() => {
+              hideModal();
+              loadPosts(); // Reload posts to show the new one
+            }, 1500);
+          } else {
+            showMessage(data.message || 'Error creating post', 'error');
+          }
+        } catch (error) {
+          console.error('Error creating post:', error);
+          showMessage('Network error. Please try again.', 'error');
+        } finally {
+          // Reset button state
+          submitBtn.disabled = false;
+          spinner.classList.add('hidden');
+          submitBtn.innerHTML = originalText;
+        }
+      });
+
       // Load posts from API
       function loadPosts() {
         fetch('/post/', {
