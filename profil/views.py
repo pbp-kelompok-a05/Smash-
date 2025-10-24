@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from Post.models import ForumPost,PostLike
 from django.http import HttpResponseRedirect, JsonResponse
 from account.models import Account
