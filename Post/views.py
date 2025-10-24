@@ -1,309 +1,339 @@
+# post/views.py
 import json
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views import View
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
-from django.core.paginator import Paginator
-from .models import ForumPost
-from .forms import ForumPostForm
-from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from .models import Post
+from comment.models import Comment
+from report.models import Report
 
-class PostListView(ListView):
-    """
-    View untuk menampilkan daftar semua post di homepage.
-    Mendukung pagination dan filtering dasar.
-    """
-    model = ForumPost
-    template_name = 'post/post_list.html'
-    context_object_name = 'posts'
-    paginate_by = 10
-    ordering = ['-created_at']
+User = get_user_model()
 
-    def get_queryset(self):
-        """Mengambil queryset dengan filter untuk post yang tidak dihapus"""
-        queryset = super().get_queryset().filter(is_deleted=False)
-        
-        # Filter berdasarkan pencarian
-        search_query = self.request.GET.get('search')
-        if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) |
-                Q(content__icontains=search_query) |
-                Q(author__username__icontains=search_query)
+class PostAPIView(View):
+    """
+    API View untuk handling CRUD operations pada Post.
+    Mendukung AJAX requests dan superuser permissions.
+    """
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch untuk handle AJAX requests"""
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_user_permissions(self, user, post=None):
+        """Helper method untuk check user permissions"""
+        is_owner = post and post.user == user if post else False
+        is_superuser = user.is_superuser or user.has_perm('post.manage_all_posts')
+        return is_owner, is_superuser
+
+    def get(self, request, post_id=None):
+        """
+        GET: Retrieve single post atau list of posts
+        AJAX Support: ✅
+        """
+        try:
+            if post_id:
+                # Get single post
+                post = Post.objects.get(id=post_id, is_deleted=False)
+                
+                # Check jika user memiliki akses
+                if post.is_deleted and not self.get_user_permissions(request.user, post)[1]:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Post tidak ditemukan atau telah dihapus'
+                    }, status=404)
+                
+                post_data = {
+                    'id': post.id,
+                    'title': post.title,
+                    'content': post.content,
+                    'image': post.image.url if post.image else None,
+                    'video_link': post.video_link,
+                    'user': post.user.username,
+                    'user_id': post.user.id,
+                    'created_at': post.created_at.isoformat(),
+                    'updated_at': post.updated_at.isoformat(),
+                    'comment_count': post.comments.filter(is_deleted=False).count(),
+                    'can_edit': self.get_user_permissions(request.user, post)[0] or 
+                               self.get_user_permissions(request.user, post)[1]
+                }
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'post': post_data
+                })
+            
+            else:
+                # Get list of posts dengan pagination
+                page = int(request.GET.get('page', 1))
+                per_page = int(request.GET.get('per_page', 10))
+                start = (page - 1) * per_page
+                end = start + per_page
+                
+                # Filter posts (superuser bisa lihat semua, user biasa hanya yang tidak deleted)
+                if request.user.is_authenticated and self.get_user_permissions(request.user)[1]:
+                    posts = Post.objects.all()
+                else:
+                    posts = Post.objects.filter(is_deleted=False)
+                
+                # Apply ordering
+                sort_by = request.GET.get('sort_by', '-created_at')
+                posts = posts.order_by(sort_by)
+                
+                posts_data = []
+                for post in posts[start:end]:
+                    posts_data.append({
+                        'id': post.id,
+                        'title': post.title,
+                        'content_preview': post.content[:100] + '...' if len(post.content) > 100 else post.content,
+                        'image': post.image.url if post.image else None,
+                        'video_link': post.video_link,
+                        'user': post.user.username,
+                        'created_at': post.created_at.isoformat(),
+                        'comment_count': post.comments.filter(is_deleted=False).count(),
+                        'can_edit': self.get_user_permissions(request.user, post)[0] or 
+                                   self.get_user_permissions(request.user, post)[1]
+                    })
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'posts': posts_data,
+                    'pagination': {
+                        'page': page,
+                        'per_page': per_page,
+                        'total': posts.count(),
+                        'has_next': end < posts.count()
+                    }
+                })
+                
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error retrieving post: {str(e)}'
+            }, status=500)
+
+    @method_decorator(require_http_methods(["POST"]))
+    def post(self, request):
+        """
+        POST: Create new post
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            data = json.loads(request.body)
+            
+            # Validasi required fields
+            required_fields = ['title', 'content']
+            for field in required_fields:
+                if not data.get(field):
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Field {field} harus diisi'
+                    }, status=400)
+            
+            # Create post
+            post = Post.objects.create(
+                user=request.user,
+                title=data['title'],
+                content=data['content'],
+                video_link=data.get('video_link', '')
             )
-        
-        # Filter berdasarkan author
-        author_filter = self.request.GET.get('author')
-        if author_filter:
-            queryset = queryset.filter(author__username=author_filter)
             
-        return queryset
+            # Handle image upload jika ada
+            if request.FILES.get('image'):
+                post.image = request.FILES['image']
+                post.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Post berhasil dibuat',
+                'post_id': post.id
+            }, status=201)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON format'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error creating post: {str(e)}'
+            }, status=500)
 
-    def get_context_data(self, **kwargs):
-        """Menambahkan context tambahan untuk template"""
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = 'Forum Padel - Beranda'
-        context['search_query'] = self.request.GET.get('search', '')
-        return context
+    @method_decorator(require_http_methods(["PUT"]))
+    def put(self, request, post_id):
+        """
+        PUT: Update existing post
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            post = Post.objects.get(id=post_id)
+            is_owner, is_superuser = self.get_user_permissions(request.user, post)
+            
+            if not (is_owner or is_superuser):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Anda tidak memiliki izin untuk mengedit post ini'
+                }, status=403)
+            
+            data = json.loads(request.body)
+            
+            # Update fields
+            update_fields = ['title', 'content', 'video_link']
+            for field in update_fields:
+                if field in data:
+                    setattr(post, field, data[field])
+            
+            # Handle image update
+            if request.FILES.get('image'):
+                post.image = request.FILES['image']
+            
+            post.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Post berhasil diupdate',
+                'post_id': post.id
+            })
+            
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error updating post: {str(e)}'
+            }, status=500)
+
+    @method_decorator(require_http_methods(["DELETE"]))
+    def delete(self, request, post_id):
+        """
+        DELETE: Soft delete post
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            post = Post.objects.get(id=post_id)
+            is_owner, is_superuser = self.get_user_permissions(request.user, post)
+            
+            if not (is_owner or is_superuser):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Anda tidak memiliki izin untuk menghapus post ini'
+                }, status=403)
+            
+            # Soft delete
+            post.delete()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Post berhasil dihapus'
+            })
+            
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error deleting post: {str(e)}'
+            }, status=500)
 
 
-class PostDetailView(DetailView):
+class PostInteractionView(View):
     """
-    View untuk menampilkan detail lengkap sebuah post.
-    Termasuk komentar dan interaksi.
+    View untuk handling post interactions (like, share, report)
+    Mendukung AJAX requests.
     """
-    model = ForumPost
-    template_name = 'post/post_detail.html'
-    context_object_name = 'post'
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
-    def get_queryset(self):
-        """Hanya tampilkan post yang tidak dihapus"""
-        return super().get_queryset().filter(is_deleted=False)
-
-    def get_context_data(self, **kwargs):
-        """Menambahkan context untuk komentar dan interaksi"""
-        context = super().get_context_data(**kwargs)
-        post = self.get_object()
-        
-        # Menambahkan data komentar (asumsi model Comment ada)
-        context['comments'] = post.comments.all().order_by('-created_at')
-        context['total_comments'] = post.comments.count()
-        
-        # Status interaksi user saat ini
-        if self.request.user.is_authenticated:
-            # Asumsi ada model UserPostInteraction untuk tracking like/dislike per user
-            try:
-                user_interaction = UserPostInteraction.objects.get(
-                    user=self.request.user, 
-                    post=post
+    @method_decorator(require_http_methods(["POST"]))
+    def post(self, request, post_id, action):
+        """
+        POST: Handle post interactions (like, share, report)
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            post = Post.objects.get(id=post_id, is_deleted=False)
+            data = json.loads(request.body) if request.body else {}
+            
+            if action == 'report':
+                # Handle report action
+                report = Report.objects.create(
+                    reporter=request.user,
+                    post=post,
+                    category=data.get('category', 'OTHER'),
+                    description=data.get('description', '')
                 )
-                context['user_liked'] = user_interaction.liked
-                context['user_disliked'] = user_interaction.disliked
-            except UserPostInteraction.DoesNotExist:
-                context['user_liked'] = False
-                context['user_disliked'] = False
-        
-        return context
-
-
-class PostCreateView(LoginRequiredMixin, CreateView):
-    """
-    View untuk membuat post baru.
-    Hanya bisa diakses oleh user yang sudah login.
-    """
-    model = ForumPost
-    form_class = ForumPostForm
-    template_name = 'post/post_form.html'
-    success_url = reverse_lazy('post:post-list')
-
-    def form_valid(self, form):
-        """Set author sebagai user yang sedang login"""
-        form.instance.author = self.request.user
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = 'Buat Post Baru'
-        context['submit_text'] = 'Publikasikan Post'
-        return context
-
-
-class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    """
-    View untuk mengupdate post yang sudah ada.
-    Hanya author yang bisa mengedit post miliknya.
-    """
-    model = ForumPost
-    form_class = ForumPostForm
-    template_name = 'post/post_form.html'
-    
-    def test_func(self):
-        """Cek apakah user adalah author dari post"""
-        post = self.get_object()
-        return self.request.user == post.author
-
-    def get_success_url(self):
-        """Redirect ke detail post setelah update"""
-        return reverse_lazy('post:post-detail', kwargs={'pk': self.object.pk})
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = 'Edit Post'
-        context['submit_text'] = 'Update Post'
-        return context
-
-
-class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    """
-    View untuk menghapus post (soft delete).
-    Bisa diakses oleh author atau admin.
-    """
-    model = ForumPost
-    template_name = 'post/post_confirm_delete.html'
-    success_url = reverse_lazy('post:post-list')
-
-    def test_func(self):
-        """Cek apakah user adalah author atau admin"""
-        post = self.get_object()
-        return self.request.user == post.author or self.request.user.is_staff
-
-    def delete(self, request, *args, **kwargs):
-        """Soft delete dengan mengubah status is_deleted"""
-        self.object = self.get_object()
-        self.object.soft_delete()
-        return redirect(self.success_url)
-
-
-# AJAX Views untuk handle interaksi
-class LikePostView(LoginRequiredMixin, View):
-    """
-    AJAX view untuk like post.
-    Hanya menerima request POST.
-    """
-    def post(self, request, pk):
-        post = get_object_or_404(ForumPost, pk=pk, is_deleted=False)
-        
-        # Asumsi ada model UserPostInteraction untuk tracking
-        user_interaction, created = UserPostInteraction.objects.get_or_create(
-            user=request.user,
-            post=post
-        )
-        
-        response_data = {}
-        
-        if user_interaction.liked:
-            # Jika sudah like, maka unlike
-            post.decrement_likes()
-            user_interaction.liked = False
-            response_data['action'] = 'unliked'
-        else:
-            # Jika belum like, maka like
-            post.increment_likes()
-            user_interaction.liked = True
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Post berhasil dilaporkan',
+                    'report_id': report.id
+                })
             
-            # Jika sebelumnya dislike, hapus dislike
-            if user_interaction.disliked:
-                post.decrement_dislikes()
-                user_interaction.disliked = False
+            elif action == 'share':
+                # Handle share action (simulasi)
+                share_count = data.get('share_count', 0) + 1
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Post berhasil dibagikan',
+                    'share_count': share_count
+                })
             
-            response_data['action'] = 'liked'
-        
-        user_interaction.save()
-        
-        response_data.update({
-            'likes_count': post.likes_count,
-            'dislikes_count': post.dislikes_count,
-            'success': True
-        })
-        
-        return JsonResponse(response_data)
-
-
-class DislikePostView(LoginRequiredMixin, View):
-    """
-    AJAX view untuk dislike post.
-    Hanya menerima request POST.
-    """
-    def post(self, request, pk):
-        post = get_object_or_404(ForumPost, pk=pk, is_deleted=False)
-        
-        user_interaction, created = UserPostInteraction.objects.get_or_create(
-            user=request.user,
-            post=post
-        )
-        
-        response_data = {}
-        
-        if user_interaction.disliked:
-            # Jika sudah dislike, maka undislike
-            post.decrement_dislikes()
-            user_interaction.disliked = False
-            response_data['action'] = 'undisliked'
-        else:
-            # Jika belum dislike, maka dislike
-            post.increment_dislikes()
-            user_interaction.disliked = True
-            
-            # Jika sebelumnya like, hapus like
-            if user_interaction.liked:
-                post.decrement_likes()
-                user_interaction.liked = False
-            
-            response_data['action'] = 'disliked'
-        
-        user_interaction.save()
-        
-        response_data.update({
-            'likes_count': post.likes_count,
-            'dislikes_count': post.dislikes_count,
-            'success': True
-        })
-        
-        return JsonResponse(response_data)
-
-
-class SharePostView(View):
-    """
-    AJAX view untuk increment share count.
-    Bisa diakses tanpa login.
-    """
-    def post(self, request, pk):
-        post = get_object_or_404(ForumPost, pk=pk, is_deleted=False)
-        post.increment_shares()
-        
-        return JsonResponse({
-            'shares_count': post.shares_count,
-            'success': True
-        })
-
-
-class GetPostStatsView(View):
-    """
-    AJAX view untuk mendapatkan statistik post.
-    Berguna untuk update real-time.
-    """
-    def get(self, request, pk):
-        post = get_object_or_404(ForumPost, pk=pk, is_deleted=False)
-        
-        return JsonResponse({
-            'likes_count': post.likes_count,
-            'dislikes_count': post.dislikes_count,
-            'shares_count': post.shares_count,
-            'total_comments': post.comments.count(),
-            'success': True
-        })
-
-
-class PopularPostsView(ListView):
-    """
-    View untuk menampilkan post popular berdasarkan interaksi.
-    """
-    model = ForumPost
-    template_name = 'post/popular_posts.html'
-    context_object_name = 'posts'
-    paginate_by = 10
-    
-    def get_queryset(self):
-        """Mengambil post dengan interaksi tertinggi"""
-        return ForumPost.objects.filter(is_deleted=False).annotate(
-            total_interactions=Count('likes_count') + Count('dislikes_count') + Count('shares_count')
-        ).order_by('-total_interactions', '-created_at')
-
-
-# Model tambahan untuk tracking interaksi user (harus didefinisikan di models.py)
-class UserPostInteraction(models.Model):
-    """
-    Model untuk melacak interaksi user dengan post (like/dislike).
-    """
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post = models.ForeignKey(ForumPost, on_delete=models.CASCADE)
-    liked = models.BooleanField(default=False)
-    disliked = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        unique_together = ['user', 'post']
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Action tidak valid'
+                }, status=400)
+                
+        except Post.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Post tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error processing action: {str(e)}'
+            }, status=500)

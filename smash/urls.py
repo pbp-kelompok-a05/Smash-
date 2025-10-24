@@ -25,8 +25,8 @@ urlpatterns = [
     # Include app URLs
     path("", include("homepage.urls")),
     path("accounts/", include("account.urls")),
-    path("forum/", include("Post.urls")),
-    path("report/", include("Report.urls")),
+    path("forum/", include("post.urls")),
+    path("report/", include("report.urls")),
     path("ads/", include("ads.urls")),
-    path("", include("Comment.urls")),
+    path("", include("comment.urls")),
 ]

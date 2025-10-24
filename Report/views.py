@@ -1,419 +1,385 @@
+# report/views.py
 import json
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views import View
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
-from django.urls import reverse_lazy
-from django.db.models import Q, Count
-from django.core.paginator import Paginator
-from django.contrib.contenttypes.models import ContentType
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from .models import Report, ReportSettings
-from .forms import ReportForm, ReportAdminForm, ReportSettingsForm
+from django.db.models import Q
+from django.contrib.auth import get_user_model
+from .models import Report
+from post.models import Post
+from comment.models import Comment
 
-# Handle referential integrity
-from django.db import IntegrityError
-from django.core.exceptions import ValidationError
+User = get_user_model()
 
-class ReportCreateView(LoginRequiredMixin, View):
+class ReportAPIView(View):
     """
-    AJAX View untuk membuat laporan baru.
+    API View untuk handling CRUD operations pada Report.
+    Hanya superuser yang dapat mengakses semua reports.
     """
-    def post(self, request):
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def check_superuser_permission(self, user):
+        """Helper method untuk check superuser permissions"""
+        return user.is_superuser or user.has_perm('report.manage_all_reports')
+
+    def get(self, request, report_id=None):
+        """
+        GET: Retrieve reports (hanya untuk superuser)
+        AJAX Support: ✅
+        """
         try:
-            # Get data from AJAX request
-            content_type_id = request.POST.get('content_type_id')
-            object_id = request.POST.get('object_id')
-            category = request.POST.get('category')
-            description = request.POST.get('description', '')
-
-            # Validate required fields
-            if not all([content_type_id, object_id, category]):
+            if not request.user.is_authenticated:
                 return JsonResponse({
-                    'success': False,
-                    'message': 'Data yang diperlukan tidak lengkap'
-                }, status=400)
-
-            # Validate category
-            valid_categories = [choice[0] for choice in Report.CATEGORY_CHOICES]
-            if category not in valid_categories:
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            if not self.check_superuser_permission(request.user):
                 return JsonResponse({
-                    'success': False,
-                    'message': 'Kategori pelaporan tidak valid'
-                }, status=400)
-
-            try:
-                content_type = ContentType.objects.get(id=content_type_id)
-                reported_object = content_type.get_object_for_this_type(id=object_id)
-            except (ContentType.DoesNotExist, Exception) as e:
+                    'status': 'error',
+                    'message': 'Hanya admin yang dapat mengakses laporan'
+                }, status=403)
+            
+            if report_id:
+                # Get single report
+                report = Report.objects.get(id=report_id)
+                
+                report_data = {
+                    'id': report.id,
+                    'reporter': report.reporter.username,
+                    'reporter_id': report.reporter.id,
+                    'category': report.category,
+                    'category_display': report.get_category_display(),
+                    'description': report.description,
+                    'status': report.status,
+                    'status_display': report.get_status_display(),
+                    'created_at': report.created_at.isoformat(),
+                    'reviewed_at': report.reviewed_at.isoformat() if report.reviewed_at else None,
+                    'reviewed_by': report.reviewed_by.username if report.reviewed_by else None,
+                    'content_type': None,
+                    'content_data': None
+                }
+                
+                # Include content data berdasarkan type
+                if report.post:
+                    report_data['content_type'] = 'post'
+                    report_data['content_data'] = {
+                        'id': report.post.id,
+                        'title': report.post.title,
+                        'content_preview': report.post.content[:100] + '...',
+                        'user': report.post.user.username
+                    }
+                elif report.comment:
+                    report_data['content_type'] = 'comment'
+                    report_data['content_data'] = {
+                        'id': report.comment.id,
+                        'content': report.comment.content,
+                        'user': report.comment.user.username,
+                        'post_id': report.comment.post.id,
+                        'post_title': report.comment.post.title
+                    }
+                
                 return JsonResponse({
-                    'success': False,
-                    'message': 'Konten yang dilaporkan tidak ditemukan'
-                }, status=404)
-
-            # Check if user already reported this object
-            existing_report = Report.objects.filter(
-                reporter=request.user,
-                content_type=content_type,
-                object_id=object_id
-            ).first()
-
-            if existing_report:
+                    'status': 'success',
+                    'report': report_data
+                })
+            
+            else:
+                # Get list of reports dengan filtering
+                status_filter = request.GET.get('status', '')
+                category_filter = request.GET.get('category', '')
+                
+                reports = Report.objects.all()
+                
+                # Apply filters
+                if status_filter:
+                    reports = reports.filter(status=status_filter)
+                if category_filter:
+                    reports = reports.filter(category=category_filter)
+                
+                # Pagination
+                page = int(request.GET.get('page', 1))
+                per_page = int(request.GET.get('per_page', 20))
+                start = (page - 1) * per_page
+                end = start + per_page
+                
+                reports_data = []
+                for report in reports.order_by('-created_at')[start:end]:
+                    report_info = {
+                        'id': report.id,
+                        'reporter': report.reporter.username,
+                        'category': report.get_category_display(),
+                        'status': report.get_status_display(),
+                        'created_at': report.created_at.isoformat(),
+                        'has_post': bool(report.post),
+                        'has_comment': bool(report.comment)
+                    }
+                    
+                    # Include content preview
+                    if report.post:
+                        report_info['content_preview'] = f"Post: {report.post.title}"
+                    elif report.comment:
+                        report_info['content_preview'] = f"Komentar: {report.comment.content[:50]}..."
+                    
+                    reports_data.append(report_info)
+                
                 return JsonResponse({
-                    'success': False,
-                    'message': 'Anda sudah melaporkan konten ini sebelumnya'
-                }, status=400)
-
-            # Create report
-            report = Report.objects.create(
-                reporter=request.user,
-                content_type=content_type,
-                object_id=object_id,
-                category=category,
-                description=description
-            )
-
-            # Check if auto-hide threshold is reached
-            settings = ReportSettings.get_settings()
-            report_count = Report.objects.filter(
-                content_type=content_type,
-                object_id=object_id,
-                status__in=[Report.STATUS_PENDING, Report.STATUS_UNDER_REVIEW]
-            ).count()
-
-            auto_hide = False
-            if report_count >= settings.auto_action_threshold and settings.auto_hide_on_threshold:
-                # Auto hide the content (example implementation)
-                if hasattr(reported_object, 'is_hidden'):
-                    reported_object.is_hidden = True
-                    reported_object.save()
-                    auto_hide = True
-
+                    'status': 'success',
+                    'reports': reports_data,
+                    'pagination': {
+                        'page': page,
+                        'per_page': per_page,
+                        'total': reports.count(),
+                        'has_next': end < reports.count()
+                    },
+                    'filters': {
+                        'status': status_filter,
+                        'category': category_filter
+                    }
+                })
+                
+        except Report.DoesNotExist:
             return JsonResponse({
-                'success': True,
-                'message': 'Laporan berhasil dikirim. Tim moderasi akan meninjaunya.',
-                'report_id': str(report.id),
-                'auto_hide': auto_hide,
-                'current_reports': report_count
-            })
-
-        except IntegrityError:
-            return JsonResponse({
-                'success': False,
-                'message': 'Terjadi kesalahan sistem. Silakan coba lagi.'
-            }, status=500)
+                'status': 'error',
+                'message': 'Laporan tidak ditemukan'
+            }, status=404)
         except Exception as e:
             return JsonResponse({
-                'success': False,
-                'message': f'Terjadi kesalahan: {str(e)}'
+                'status': 'error',
+                'message': f'Error retrieving reports: {str(e)}'
+            }, status=500)
+
+    @method_decorator(require_http_methods(["POST"]))
+    def post(self, request):
+        """
+        POST: Create new report
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            data = json.loads(request.body)
+            
+            # Validasi required fields
+            required_fields = ['category']
+            for field in required_fields:
+                if not data.get(field):
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Field {field} harus diisi'
+                    }, status=400)
+            
+            # Validasi: harus ada post_id ATAU comment_id
+            post_id = data.get('post_id')
+            comment_id = data.get('comment_id')
+            
+            if not post_id and not comment_id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Harus melaporkan post atau komentar'
+                }, status=400)
+            
+            # Build report data
+            report_data = {
+                'reporter': request.user,
+                'category': data['category'],
+                'description': data.get('description', '')
+            }
+            
+            # Link ke post atau comment
+            if post_id:
+                try:
+                    report_data['post'] = Post.objects.get(id=post_id, is_deleted=False)
+                except Post.DoesNotExist:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Post tidak ditemukan'
+                    }, status=404)
+            
+            if comment_id:
+                try:
+                    report_data['comment'] = Comment.objects.get(id=comment_id, is_deleted=False)
+                except Comment.DoesNotExist:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Komentar tidak ditemukan'
+                    }, status=404)
+            
+            # Create report
+            report = Report.objects.create(**report_data)
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Laporan berhasil dikirim',
+                'report_id': report.id
+            }, status=201)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON format'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error creating report: {str(e)}'
+            }, status=500)
+
+    @method_decorator(require_http_methods(["PUT"]))
+    def put(self, request, report_id):
+        """
+        PUT: Update report status (hanya untuk superuser)
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            if not self.check_superuser_permission(request.user):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Hanya admin yang dapat mengupdate laporan'
+                }, status=403)
+            
+            report = Report.objects.get(id=report_id)
+            data = json.loads(request.body)
+            
+            # Update status
+            if 'status' in data:
+                report.status = data['status']
+                if data['status'] == 'REVIEWED' and not report.reviewed_at:
+                    report.reviewed_at = timezone.now()
+                    report.reviewed_by = request.user
+            
+            report.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Status laporan berhasil diupdate',
+                'report_id': report.id,
+                'new_status': report.get_status_display()
+            })
+            
+        except Report.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Laporan tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error updating report: {str(e)}'
+            }, status=500)
+
+    @method_decorator(require_http_methods(["DELETE"]))
+    def delete(self, request, report_id):
+        """
+        DELETE: Delete report (hanya untuk superuser)
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Authentication required'
+                }, status=401)
+            
+            if not self.check_superuser_permission(request.user):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Hanya admin yang dapat menghapus laporan'
+                }, status=403)
+            
+            report = Report.objects.get(id=report_id)
+            report.delete()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Laporan berhasil dihapus'
+            })
+            
+        except Report.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Laporan tidak ditemukan'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error deleting report: {str(e)}'
             }, status=500)
 
 
-class ReportListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+class ReportStatsView(View):
     """
-    View untuk menampilkan daftar laporan (hanya admin/staff).
+    View untuk mendapatkan statistics reports (hanya superuser)
     """
-    model = Report
-    template_name = 'report/report_list.html'
-    context_object_name = 'reports'
-    paginate_by = 20
-    ordering = ['-created_at']
-
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filter berdasarkan status
-        status_filter = self.request.GET.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        
-        # Filter berdasarkan kategori
-        category_filter = self.request.GET.get('category')
-        if category_filter:
-            queryset = queryset.filter(category=category_filter)
-        
-        # Filter berdasarkan konten type
-        content_type_filter = self.request.GET.get('content_type')
-        if content_type_filter:
-            queryset = queryset.filter(content_type__model=content_type_filter)
-        
-        # Search
-        search_query = self.request.GET.get('search')
-        if search_query:
-            queryset = queryset.filter(
-                Q(description__icontains=search_query) |
-                Q(reporter__username__icontains=search_query) |
-                Q(admin_notes__icontains=search_query)
-            )
-        
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['status_choices'] = Report.STATUS_CHOICES
-        context['category_choices'] = Report.CATEGORY_CHOICES
-        context['content_types'] = ContentType.objects.filter(
-            model__in=['forumpost', 'comment']
-        )
-        
-        # Stats for dashboard
-        context['total_reports'] = Report.objects.count()
-        context['pending_reports'] = Report.objects.filter(status=Report.STATUS_PENDING).count()
-        context['resolved_reports'] = Report.objects.filter(status=Report.STATUS_RESOLVED).count()
-        
-        return context
-
-
-class ReportDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
-    """
-    View untuk melihat detail laporan (hanya admin/staff).
-    """
-    model = Report
-    template_name = 'report/report_detail.html'
-    context_object_name = 'report'
-
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        report = self.get_object()
-        
-        # Get all reports for the same object
-        context['related_reports'] = Report.objects.filter(
-            content_type=report.content_type,
-            object_id=report.object_id
-        ).exclude(id=report.id).order_by('-created_at')
-        
-        context['total_reports_for_object'] = context['related_reports'].count() + 1
-        
-        return context
-
-
-class ReportUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    """
-    View untuk mengupdate status laporan (hanya admin/staff).
-    """
-    model = Report
-    form_class = ReportAdminForm
-    template_name = 'report/report_update.html'
     
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def form_valid(self, form):
-        report = form.save(commit=False)
-        
-        # Jika status berubah ke under_review, set reviewed_by dan reviewed_at
-        if report.status == Report.STATUS_UNDER_REVIEW and not report.reviewed_by:
-            report.reviewed_by = self.request.user
-            report.reviewed_at = timezone.now()
-        
-        # Jika status berubah ke resolved atau rejected, set is_resolved
-        if report.status in [Report.STATUS_RESOLVED, Report.STATUS_REJECTED]:
-            report.is_resolved = True
-            if not report.reviewed_by:
-                report.reviewed_by = self.request.user
-                report.reviewed_at = timezone.now()
-        
-        report.save()
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('report:report-detail', kwargs={'pk': self.object.pk})
-
-
-class ReportDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    """
-    View untuk menghapus laporan (hanya admin/staff).
-    """
-    model = Report
-    template_name = 'report/report_confirm_delete.html'
-    success_url = reverse_lazy('report:report-list')
-
-    def test_func(self):
-        return self.request.user.is_staff
-
-
-# AJAX Views untuk admin actions
-class BulkReportActionView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """
-    AJAX View untuk aksi massal pada laporan.
-    """
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def post(self, request):
-        action = request.POST.get('action')
-        report_ids = request.POST.getlist('report_ids[]')
-        
-        if not report_ids:
-            return JsonResponse({
-                'success': False,
-                'message': 'Tidak ada laporan yang dipilih'
-            }, status=400)
-
-        reports = Report.objects.filter(id__in=report_ids)
-        updated_count = 0
-
-        if action == 'mark_reviewed':
-            for report in reports:
-                if report.status == Report.STATUS_PENDING:
-                    report.mark_as_reviewed(request.user)
-                    updated_count += 1
-        
-        elif action == 'mark_resolved':
-            for report in reports:
-                if report.status != Report.STATUS_RESOLVED:
-                    report.mark_as_resolved(request.user)
-                    updated_count += 1
-        
-        elif action == 'mark_rejected':
-            for report in reports:
-                if report.status != Report.STATUS_REJECTED:
-                    report.mark_as_rejected(request.user)
-                    updated_count += 1
-        
-        elif action == 'delete':
-            reports.delete()
-            return JsonResponse({
-                'success': True,
-                'message': f'{len(reports)} laporan berhasil dihapus'
-            })
-
-        else:
-            return JsonResponse({
-                'success': False,
-                'message': 'Aksi tidak valid'
-            }, status=400)
-
-        return JsonResponse({
-            'success': True,
-            'message': f'{updated_count} laporan berhasil diperbarui'
-        })
-
-
-class UpdateReportStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """
-    AJAX View untuk mengupdate status laporan individual.
-    """
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def post(self, request, pk):
-        report = get_object_or_404(Report, pk=pk)
-        new_status = request.POST.get('status')
-        admin_notes = request.POST.get('admin_notes', '')
-
-        if new_status not in dict(Report.STATUS_CHOICES):
-            return JsonResponse({
-                'success': False,
-                'message': 'Status tidak valid'
-            }, status=400)
-
-        # Update report
-        report.status = new_status
-        report.admin_notes = admin_notes
-        
-        if new_status == Report.STATUS_UNDER_REVIEW:
-            report.mark_as_reviewed(request.user)
-        elif new_status in [Report.STATUS_RESOLVED, Report.STATUS_REJECTED]:
-            report.mark_as_resolved(request.user) if new_status == Report.STATUS_RESOLVED else report.mark_as_rejected(request.user)
-        
-        report.save()
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Status laporan berhasil diperbarui',
-            'new_status': report.get_status_display(),
-            'reviewed_by': report.reviewed_by.username if report.reviewed_by else '',
-            'reviewed_at': report.reviewed_at.strftime('%d %b %Y %H:%M') if report.reviewed_at else ''
-        })
-
-
-class GetReportStatsView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """
-    AJAX View untuk mendapatkan statistik laporan.
-    """
-    def test_func(self):
-        return self.request.user.is_staff
-
     def get(self, request):
-        today = timezone.now().date()
-        
-        # Basic stats
-        stats = {
-            'total': Report.objects.count(),
-            'pending': Report.objects.filter(status=Report.STATUS_PENDING).count(),
-            'under_review': Report.objects.filter(status=Report.STATUS_UNDER_REVIEW).count(),
-            'resolved': Report.objects.filter(status=Report.STATUS_RESOLVED).count(),
-            'rejected': Report.objects.filter(status=Report.STATUS_REJECTED).count(),
-        }
-        
-        # Today's reports
-        stats['today'] = Report.objects.filter(created_at__date=today).count()
-        
-        # By category
-        stats['by_category'] = {
-            category: Report.objects.filter(category=category).count()
-            for category, _ in Report.CATEGORY_CHOICES
-        }
-        
-        # By content type
-        stats['by_content_type'] = {
-            'post': Report.objects.filter(content_type__model='forumpost').count(),
-            'comment': Report.objects.filter(content_type__model='comment').count(),
-        }
-        
-        return JsonResponse({
-            'success': True,
-            'stats': stats
-        })
-
-
-class ReportSettingsView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    """
-    View untuk mengatur pengaturan sistem pelaporan.
-    """
-    model = ReportSettings
-    form_class = ReportSettingsForm
-    template_name = 'report/report_settings.html'
-    success_url = reverse_lazy('report:report-settings')
-
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def get_object(self):
-        # Get or create settings object
-        obj, created = ReportSettings.objects.get_or_create(pk=1)
-        return obj
-
-    def form_valid(self, form):
-        form.instance.updated_by = self.request.user
-        return super().form_valid(form)
-
-
-class UserReportHistoryView(LoginRequiredMixin, ListView):
-    """
-    View untuk menampilkan riwayat laporan user.
-    """
-    model = Report
-    template_name = 'report/user_report_history.html'
-    context_object_name = 'reports'
-    paginate_by = 10
-
-    def get_queryset(self):
-        return Report.objects.filter(
-            reporter=self.request.user
-        ).order_by('-created_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['total_reports'] = self.get_queryset().count()
-        return context
+        """
+        GET: Get report statistics
+        AJAX Support: ✅
+        """
+        try:
+            if not request.user.is_authenticated or not self.check_superuser_permission(request.user):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Hanya admin yang dapat mengakses statistik'
+                }, status=403)
+            
+            # Calculate statistics
+            total_reports = Report.objects.count()
+            pending_reports = Report.objects.filter(status='PENDING').count()
+            reviewed_reports = Report.objects.filter(status='REVIEWED').count()
+            resolved_reports = Report.objects.filter(status='RESOLVED').count()
+            
+            # Category statistics
+            category_stats = {}
+            for category in Report.REPORT_CATEGORIES:
+                category_code = category[0]
+                category_stats[category_code] = {
+                    'name': category[1],
+                    'count': Report.objects.filter(category=category_code).count()
+                }
+            
+            # Recent activity
+            recent_reports = Report.objects.order_by('-created_at')[:5]
+            recent_data = []
+            for report in recent_reports:
+                recent_data.append({
+                    'id': report.id,
+                    'category': report.get_category_display(),
+                    'status': report.get_status_display(),
+                    'created_at': report.created_at.isoformat()
+                })
+            
+            return JsonResponse({
+                'status': 'success',
+                'statistics': {
+                    'total': total_reports,
+                    'pending': pending_reports,
+                    'reviewed': reviewed_reports,
+                    'resolved': resolved_reports,
+                    'categories': category_stats
+                },
+                'recent_activity': recent_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error retrieving statistics: {str(e)}'
+            }, status=500)

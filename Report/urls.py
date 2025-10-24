@@ -1,22 +1,68 @@
+# report/urls.py
 from django.urls import path
 from . import views
 
 app_name = 'report'
 
 urlpatterns = [
-    # User URLs
-    path('create/', views.ReportCreateView.as_view(), name='report-create'),
-    path('my-reports/', views.UserReportHistoryView.as_view(), name='user-report-history'),
+    # =============================================
+    # REPORT CRUD ENDPOINTS
+    # =============================================
     
-    # Admin URLs
-    path('admin/', views.ReportListView.as_view(), name='report-list'),
-    path('admin/<uuid:pk>/', views.ReportDetailView.as_view(), name='report-detail'),
-    path('admin/<uuid:pk>/update/', views.ReportUpdateView.as_view(), name='report-update'),
-    path('admin/<uuid:pk>/delete/', views.ReportDeleteView.as_view(), name='report-delete'),
-    path('admin/settings/', views.ReportSettingsView.as_view(), name='report-settings'),
+    # List reports (admin only) & Create new report
+    path('', views.ReportAPIView.as_view(), name='report-list-create'),
     
-    # AJAX URLs
-    path('admin/bulk-action/', views.BulkReportActionView.as_view(), name='bulk-report-action'),
-    path('admin/<uuid:pk>/update-status/', views.UpdateReportStatusView.as_view(), name='update-report-status'),
-    path('admin/stats/', views.GetReportStatsView.as_view(), name='report-stats'),
+    # Get, Update, Delete specific report (admin only)
+    path('<int:report_id>/', views.ReportAPIView.as_view(), name='report-detail'),
+    
+    # =============================================
+    # REPORT STATISTICS & DASHBOARD
+    # =============================================
+    
+    # Report statistics (admin only)
+    path('stats/', views.ReportStatsView.as_view(), name='report-stats'),
+    
+    # Dashboard overview (admin only)
+    path('admin/dashboard/', views.ReportStatsView.as_view(), name='admin-dashboard'),
+    
+    # =============================================
+    # REPORT FILTERING & SEARCH
+    # =============================================
+    
+    # Filtered reports by status
+    path('status/<str:status>/', 
+         views.ReportAPIView.as_view(), 
+         name='report-by-status'),
+    
+    # Filtered reports by category  
+    path('category/<str:category>/', 
+         views.ReportAPIView.as_view(), 
+         name='report-by-category'),
+    
+    # Search reports
+    path('search/', views.ReportAPIView.as_view(), name='report-search'),
+    
+    # =============================================
+    # USER-SPECIFIC REPORT ENDPOINTS
+    # =============================================
+    
+    # User's own reports
+    path('user/reports/', views.ReportAPIView.as_view(), name='user-report-list'),
+    
+    # User's report statistics
+    path('user/stats/', views.ReportStatsView.as_view(), name='user-report-stats'),
+    
+    # =============================================
+    # BULK REPORT ACTIONS (Admin Only)
+    # =============================================
+    
+    # Bulk update report status
+    path('admin/bulk-update/', 
+         views.ReportAPIView.as_view(), 
+         name='admin-report-bulk-update'),
+    
+    # Bulk delete reports
+    path('admin/bulk-delete/', 
+         views.ReportAPIView.as_view(), 
+         name='admin-report-bulk-delete'),
 ]
