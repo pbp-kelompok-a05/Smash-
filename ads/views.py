@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 
 from ads.forms import AdForm
-from .models import Ad
+from .models import Advertisement
 
 # Create your views here.
 def is_superuser(user):
@@ -13,7 +13,7 @@ def is_superuser(user):
 
 @user_passes_test(lambda u: u.is_superuser, login_url='/admin-login/')
 def manage_ads(request):
-    ads = Ad.objects.all().order_by('-created_at')
+    ads = Advertisement.objects.all().order_by('-created_at')
 
     # handle form submission
     if request.method == 'POST':
