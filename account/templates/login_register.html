@@ -1,3 +1,11 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Login - Smash!</title>
+{% endblock meta %}
+
+{% block content %}
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -36,6 +44,19 @@
             background-color: #fee2e2;
             color: #991b1b;
         }
+        /* Custom gradient overlay untuk gambar */
+        .image-overlay {
+            background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 100%);
+        }
+        /* Desaturasi gambar */
+        .desaturated-image {
+            filter: saturate(0.6) brightness(1.1);
+        }
+        /* Efek hover untuk gambar */
+        .image-container:hover .desaturated-image {
+            filter: saturate(0.8) brightness(1.05);
+            transition: filter 0.5s ease;
+        }
     </style>
 </head>
 <body class="bg-white">
@@ -46,6 +67,12 @@
         <div class="w-full md:w-1/2 lg:w-5/12 xl:w-1/3 flex justify-center items-center p-8 md:p-12 min-h-screen">
             <div class="w-full max-w-sm">
 
+                <!-- Logo/Header SMASH -->
+                <div class="text-center mb-8">
+                    <h1 class="text-4xl font-bold text-gray-900">SMASH</h1>
+                    <p class="text-gray-600 mt-2">Community for Padel Enthusiasts</p>
+                </div>
+
                 <!-- Area untuk menampilkan pesan sukses atau error -->
                 <div id="message-area" class="message-box"></div>
 
@@ -54,23 +81,38 @@
                     <h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
                     <p class="text-sm text-gray-500 mt-2">Welcome back to SMASH!</p>
                     
-                    <form class="mt-8 space-y-6 ajax-form" action="/accounts/ajax/login/" method="POST">
+                    <form class="mt-8 space-y-6 ajax-form" action="{% url 'login_ajax' %}" method="POST">
                         {% csrf_token %}
                         <!-- Input Username -->
                         <div>
                             <label for="login-username" class="block text-sm font-medium text-gray-700">Username*</label>
-                            <input id="login-username" name="username" type="text" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your username">
+                            <input id="login-username" name="username" type="text" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your username">
                         </div>
 
                         <!-- Input Password -->
                         <div>
                             <label for="login-password" class="block text-sm font-medium text-gray-700">Password*</label>
-                            <input id="login-password" name="password" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your password">
+                            <input id="login-password" name="password" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your password">
+                        </div>
+
+                        <!-- Remember Me Checkbox -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <input id="remember-me" name="remember_me" type="checkbox" class="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300 rounded">
+                                <label for="remember-me" class="ml-2 block text-sm text-gray-700">
+                                    Remember me
+                                </label>
+                            </div>
+                            <div class="text-sm">
+                                <a href="#" class="font-medium text-gray-900 hover:text-gray-700">
+                                    Forgot password?
+                                </a>
+                            </div>
                         </div>
 
                         <!-- Tombol Sign In -->
                         <div>
-                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
+                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-colors duration-200">
                                 Sign In
                             </button>
                         </div>
@@ -78,7 +120,7 @@
                     
                     <p class="mt-6 text-center text-sm text-gray-600">
                         Don't have an account?
-                        <a href="#" id="show-register" class="font-medium text-blue-600 hover:text-blue-500">
+                        <a href="#" id="show-register" class="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
                             Create account
                         </a>
                     </p>
@@ -89,29 +131,43 @@
                     <h2 class="text-3xl font-bold text-gray-900">Create your account</h2>
                     <p class="text-sm text-gray-500 mt-2">Join SMASH! today.</p>
 
-                    <form class="mt-8 space-y-6 ajax-form" action="/accounts/ajax/register/" method="POST">
+                    <form class="mt-8 space-y-6 ajax-form" action="{% url 'register_ajax' %}" method="POST">
                         {% csrf_token %}
                          <!-- Input Username -->
                         <div>
                             <label for="reg-username" class="block text-sm font-medium text-gray-700">Username*</label>
-                            <input id="reg-username" name="username" type="text" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Choose a username">
+                            <input id="reg-username" name="username" type="text" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Choose a username">
                         </div>
                         
+                        <!-- Input Email -->
+                        <div>
+                            <label for="reg-email" class="block text-sm font-medium text-gray-700">Email (Optional)</label>
+                            <input id="reg-email" name="email" type="email" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your email">
+                        </div>
+
                         <!-- Input Password 1 -->
                         <div>
                             <label for="reg-password" class="block text-sm font-medium text-gray-700">Password*</label>
-                            <input id="reg-password" name="password1" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter a password">
+                            <input id="reg-password" name="password1" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter a password">
                         </div>
 
                         <!-- Input Password 2 -->
                          <div>
                             <label for="reg-password2" class="block text-sm font-medium text-gray-700">Confirm Password*</label>
-                            <input id="reg-password2" name="password2" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Confirm your password">
+                            <input id="reg-password2" name="password2" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Confirm your password">
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="flex items-center">
+                            <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-gray-900 focus:ring-gray-900 border-gray-300 rounded">
+                            <label for="terms" class="ml-2 block text-sm text-gray-700">
+                                I agree to the <a href="#" class="text-gray-900 hover:text-gray-700 underline">Terms and Conditions</a>
+                            </label>
                         </div>
 
                         <!-- Tombol Create Account -->
                         <div>
-                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
+                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-colors duration-200">
                                 Create account
                             </button>
                         </div>
@@ -119,7 +175,7 @@
 
                     <p class="mt-6 text-center text-sm text-gray-600">
                         Already have an account?
-                        <a href="#" id="show-login" class="font-medium text-blue-600 hover:text-blue-500">
+                        <a href="#" id="show-login" class="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
                             Sign In
                         </a>
                     </p>
@@ -128,15 +184,45 @@
             </div>
         </div>
 
-        <!-- Bagian Kanan (Gradien) - Tersembunyi di Mobile -->
-        <div class="hidden md:flex w-full md:w-1/2 lg:w-7/12 xl:w-2/3 bg-gradient-to-br from-emerald-100 to-rose-100 min-h-screen">
-            <!-- Panel ini hanya untuk visual di desktop -->
+        <!-- Bagian Kanan (Gambar) - Tersembunyi di Mobile -->
+        <div class="hidden md:flex w-full md:w-1/2 lg:w-7/12 xl:w-2/3 relative min-h-screen image-container">
+            <!-- Gambar dengan desaturasi -->
+            <div class="absolute inset-0 bg-cover bg-center desaturated-image" style="background-image: url('https://i.pinimg.com/1200x/7e/b4/c3/7eb4c39e416a94f38b31a48df5e1bf69.jpg');"></div>
+            
+            <!-- Overlay gradient untuk meningkatkan keterbacaan teks -->
+            <div class="absolute inset-0 image-overlay"></div>
+            
+            <!-- Konten teks di atas gambar -->
+            <div class="relative z-10 flex flex-col justify-center items-start p-12 text-white max-w-lg">
+                <h2 class="text-4xl font-bold mb-4">Join the SMASH Community</h2>
+                <p class="text-xl mb-6">Connect with Padel enthusiasts, share your experiences, and discover new playing partners.</p>
+                <ul class="space-y-3 text-lg">
+                    <li class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Share your Padel experiences
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Find playing partners
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                        Discover new techniques
+                    </li>
+                </ul>
+            </div>
         </div>
 
     </div>
 
     <script>
-        // --- LOGIKA UNTUK GANTI FORM (Sudah ada sebelumnya) ---
+        // --- LOGIKA UNTUK GANTI FORM ---
         const loginForm = document.getElementById('login-form');
         const registerForm = document.getElementById('register-form');
         const showRegisterLink = document.getElementById('show-register');
@@ -158,7 +244,7 @@
             }, 150);
         });
 
-        // --- LOGIKA AJAX DARI auth.js (Sudah diperbaiki) ---
+        // --- LOGIKA AJAX DENGAN URL YANG SESUAI ---
 
         // 1. Fungsi untuk mengambil CSRF token dari cookie
         function getCookie(name) {
@@ -187,6 +273,13 @@
                 messageArea.className = 'message-box message-error';
             }
             messageArea.style.display = 'block';
+            
+            // Auto-hide pesan sukses setelah 5 detik
+            if (isSuccess) {
+                setTimeout(() => {
+                    messageArea.style.display = 'none';
+                }, 5000);
+            }
         }
 
         // 3. Event listener untuk submit form
@@ -199,13 +292,22 @@
             const url = form.action;
             const formData = new FormData(form);
             
+            // Menampilkan loading state pada tombol
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.textContent = 'Processing...';
+            submitButton.disabled = true;
+            
             // Mengosongkan pesan error sebelumnya
             messageArea.style.display = 'none';
 
             try {
                 const res = await fetch(url, {
                     method: "POST",
-                    headers: {'X-CSRFToken': csrftoken}, // Mengirim CSRF token di header
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     body: formData
                 });
                 
@@ -213,32 +315,103 @@
                 
                 if(data.success){
                     // Sukses
-                    showMessage("Sukses! Selamat datang " + (data.username || ''));
-                    // Refresh halaman setelah 2 detik agar user bisa baca pesan
-                    setTimeout(() => {
-                        location.reload();
-                    }, 2000);
+                    showMessage(data.message || "Operation successful!", true);
+                    
+                    // Jika login/register berhasil, redirect setelah delay
+                    if (data.redirect_url) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect_url;
+                        }, 1500);
+                    } else {
+                        // Default redirect ke home
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1500);
+                    }
                 } else {
                     // Gagal
-                    // Merangkai pesan error
                     let errorMessage = "Terjadi kesalahan.";
                     if (data.errors) {
                         // Memformat error dari Django form
-                        errorMessage = Object.keys(data.errors).map(key => {
-                            return data.errors[key].map(err => err.message || err).join(' ');
-                        }).join('\n');
+                        errorMessage = Object.values(data.errors).flat().join(' ');
                     } else if (data.error) {
                         errorMessage = data.error;
+                    } else if (data.message) {
+                        errorMessage = data.message;
                     }
                     showMessage(errorMessage, false);
                 }
             } catch (error) {
                 console.error("Fetch error:", error);
                 showMessage("Tidak dapat terhubung ke server.", false);
+            } finally {
+                // Reset tombol ke state semula
+                submitButton.textContent = originalText;
+                submitButton.disabled = false;
             }
           }
         });
+
+        // 4. Validasi konfirmasi password
+        const passwordInput = document.getElementById('reg-password');
+        const confirmPasswordInput = document.getElementById('reg-password2');
+        
+        if (passwordInput && confirmPasswordInput) {
+            confirmPasswordInput.addEventListener('input', function() {
+                if (passwordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordInput.setCustomValidity('Passwords do not match');
+                } else {
+                    confirmPasswordInput.setCustomValidity('');
+                }
+            });
+        }
+
+        // 5. Toggle password visibility (opsional)
+        function setupPasswordToggle() {
+            const passwordFields = document.querySelectorAll('input[type="password"]');
+            passwordFields.forEach(field => {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600';
+                toggleBtn.innerHTML = `
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                `;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+                field.parentNode.insertBefore(wrapper, field);
+                wrapper.appendChild(field);
+                wrapper.appendChild(toggleBtn);
+                
+                toggleBtn.addEventListener('click', function() {
+                    const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
+                    field.setAttribute('type', type);
+                    
+                    // Ganti ikon
+                    if (type === 'text') {
+                        toggleBtn.innerHTML = `
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        `;
+                    } else {
+                        toggleBtn.innerHTML = `
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        `;
+                    }
+                });
+            });
+        }
+        
+        // Jalankan fungsi toggle password setelah DOM loaded
+        document.addEventListener('DOMContentLoaded', setupPasswordToggle);
     </script>
 </body>
 </html>
-
+{% endblock content %}

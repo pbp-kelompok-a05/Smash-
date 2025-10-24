@@ -31,7 +31,8 @@ from django.views.decorators.http import require_POST
 # Melindungi serangan XSS
 from django.utils.html import strip_tags
 
-def show_main(request):
+@login_required
+def home(request):
     # Penambahan konfigurasi untuk melakukan filter news yang telah dibuat sebelumnya
     # hal tersebut akan menampilkan halaman utama setelah user login
 
