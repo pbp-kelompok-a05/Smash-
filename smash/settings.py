@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "report",
     "comment",
     "ads",
+    "profil",
     "homepage",
     "account",
     "cardview",
