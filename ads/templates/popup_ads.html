@@ -1,0 +1,43 @@
+{% if popup_ad %}
+<div id="popup-ads"
+     class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+  <div class="relative">
+    <!-- Tombol close -->
+    <button id="close-ads"
+            class="absolute -top-3 -right-3 bg-white rounded-full shadow text-gray-600 w-8 h-8 flex items-center justify-center hover:bg-gray-100">
+      ✖
+    </button>
+
+    <!-- Gambar iklan -->
+    {% if popup_ad.link %}
+      <a href="{{ popup_ad.link }}" target="_blank" rel="noopener">
+        <img src="{{ popup_ad.image.url }}" alt="Advertisement"
+             class="rounded-2xl w-80 sm:w-96 object-cover shadow-lg hover:scale-[1.02] transition-transform">
+      </a>
+    {% else %}
+      <img src="{{ popup_ad.image.url }}" alt="Advertisement"
+           class="rounded-2xl w-80 sm:w-96 object-cover shadow-lg hover:scale-[1.02] transition-transform">
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const popup = document.getElementById('popup-ads');
+  const closeBtn = document.getElementById('close-ads');
+  if (!popup) return;
+
+  // 👇 gunakan data-delay di HTML untuk hindari lint error
+  const delayAttr = popup.getAttribute('data-delay') || '3';
+  const delay = parseInt(delayAttr, 10) * 1000;
+
+  setTimeout(() => {
+    popup.classList.remove('hidden');
+  }, delay);
+
+  closeBtn.addEventListener('click', () => {
+    popup.classList.add('hidden');
+  });
+});
+</script>
+{% endif %}
