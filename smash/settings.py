@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     "report",
     "comment",
     "ads",
-    "homepage",
+    # "homepage",
     "account",
     "cardview",
 ]
@@ -77,7 +77,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                'main.context_processors.ads_context',
+                'ads.context_processors.ads_context',
             ],
         },
     },
@@ -150,10 +150,16 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_URL = '/ads/admin-login/'
+LOGIN_REDIRECT_URL = '/ads/manage/'
