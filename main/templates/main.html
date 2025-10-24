@@ -25,6 +25,18 @@
       ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 8px; }
       /* small card shadow like the design */
       .card-shadow { box-shadow: 0 6px 20px rgba(13, 18, 25, 0.06); }
+      .loading-spinner {
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #3498db;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body class="bg-gradient-to-b from-white via-emerald-50 to-pink-50 min-h-screen">
@@ -61,6 +73,16 @@
           <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">ℹ️ Tentang SMASH</a>
           <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">📞 Hubungi Kami</a>
 
+          <!-- Logout Button -->
+          <div class="mt-8 pt-4 border-t border-gray-200">
+            <button id="logout-btn" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 w-full text-left">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
+          </div>
+
           <div class="mt-8 text-xs text-gray-400">© 2025 SMASH. All rights reserved.</div>
         </nav>
       </aside>
@@ -81,8 +103,14 @@
           </div>
 
           <div class="flex items-center gap-3">
-            <a href="#" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Register</a>
-            <a href="#" class="px-4 py-2 bg-white border border-gray-200 rounded-md text-sm">Login</a>
+            <!-- User info and logout button for mobile -->
+            <span class="text-sm text-gray-700 hidden sm:block">Welcome, {{ request.user.username }}</span>
+            <button id="mobile-logout-btn" class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
           </div>
         </header>
 
@@ -95,90 +123,228 @@
           </div>
 
           <!-- Feed column -->
-          <section class="max-w-4xl mx-auto">
-
-            <!-- Post card -->
-            <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
-              <header class="px-6 py-4 flex items-start gap-4">
-                <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" alt="avatar" class="w-12 h-12 rounded-full object-cover" />
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <h3 class="font-semibold text-lg">Behance Connection</h3>
-                    <span class="text-xs text-gray-400">• Sally White</span>
-                    <span class="text-xs text-gray-400">| 1 day ago</span>
-                  </div>
-                  <p class="text-gray-600 text-sm mt-2">Hi, there! This is an app that allows users to search for recipes while keeping their health in check. The design of this app makes it easy for everyone to find different recipes of their choice along wit <a href="#" class="text-blue-600">...view more</a></p>
-                </div>
-              </header>
-
-              <div class="px-6 pb-6">
-                <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" alt="post media" class="w-full rounded-lg object-cover max-h-[480px]" />
-              </div>
-
-              <footer class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-                <div class="flex items-center gap-6 text-gray-600">
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="font-medium">182</span>
-                    <span class="text-xs">likes</span>
-                    <span class="mx-2">•</span>
-                    <span class="font-medium">21</span>
-                    <span class="text-xs">comments</span>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-6 text-gray-600">
-                  <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Like">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
-                    Like
-                  </button>
-                  <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Comment">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/></svg>
-                    Comment
-                  </button>
-                  <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Save">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v16l7-5 7 5V3z"/></svg>
-                    Save
-                  </button>
-                </div>
-
-                <div>
-                  <button class="flex items-center gap-2 text-gray-600 hover:text-black" aria-label="Share">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 6l-4-4-4 4"/></svg>
-                    Share
-                  </button>
-                </div>
-              </footer>
-            </article>
-
-            <!-- Another card (small) -->
-            <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6 p-4">
-              <div class="flex items-start gap-4">
-                <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" alt="avatar" class="w-10 h-10 rounded-full object-cover" />
-                <div>
-                  <h4 class="font-semibold">Design Hive</h4>
-                  <p class="text-xs text-gray-500">2 days ago</p>
-                </div>
-              </div>
-            </article>
-
+          <section class="max-w-4xl mx-auto" id="posts-container">
+            <!-- Posts will be loaded here dynamically -->
+            <div id="loading-posts" class="text-center py-12">
+              <div class="loading-spinner mx-auto mb-4"></div>
+              <p class="text-gray-500">Loading posts...</p>
+            </div>
           </section>
         </main>
       </div>
     </div>
 
-    <!-- Simple JS for like toggle demo -->
+    <!-- JavaScript for dynamic posts and logout -->
     <script>
-      document.querySelectorAll('button[aria-label="Like"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          btn.classList.toggle('text-pink-600');
-          // demo visual only: toggle number
-          const countNode = btn.closest('article').querySelector('footer div:first-child .font-medium');
-          if (countNode) {
-            // not strict about exact value; visual demo
-            const n = parseInt(countNode.textContent) || 0;
-            countNode.textContent = btn.classList.contains('text-pink-600') ? (n+1) : Math.max(n-1,0);
+      // CSRF Token for AJAX requests
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
           }
+        }
+        return cookieValue;
+      }
+
+      const csrftoken = getCookie('csrftoken');
+
+      // Load posts from API
+      function loadPosts() {
+        fetch('/post/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          const container = document.getElementById('posts-container');
+          const loading = document.getElementById('loading-posts');
+          
+          if (loading) {
+            loading.remove();
+          }
+
+          if (data.status === 'success' && data.posts && data.posts.length > 0) {
+            container.innerHTML = data.posts.map(post => `
+              <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6" data-post-id="${post.id}">
+                <header class="px-6 py-4 flex items-start gap-4">
+                  <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" 
+                       alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <h3 class="font-semibold text-lg">${escapeHtml(post.title)}</h3>
+                      <span class="text-xs text-gray-400">• ${escapeHtml(post.user)}</span>
+                      <span class="text-xs text-gray-400">| ${formatDate(post.created_at)}</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mt-2">
+                      ${escapeHtml(post.content_preview || post.content?.substring(0, 200) || '')}
+                      ${post.content && post.content.length > 200 ? '<a href="#" class="text-blue-600">...view more</a>' : ''}
+                    </p>
+                  </div>
+                </header>
+
+                ${post.image ? `
+                  <div class="px-6 pb-6">
+                    <img src="${post.image}" alt="post media" class="w-full rounded-lg object-cover max-h-[480px]" />
+                  </div>
+                ` : ''}
+
+                <footer class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                  <div class="flex items-center gap-6 text-gray-600">
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="font-medium">0</span>
+                      <span class="text-xs">likes</span>
+                      <span class="mx-2">•</span>
+                      <span class="font-medium">${post.comment_count || 0}</span>
+                      <span class="text-xs">comments</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-6 text-gray-600">
+                    <button class="flex items-center gap-2 text-sm hover:text-black like-btn" aria-label="Like">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                      </svg>
+                      Like
+                    </button>
+                    <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Comment">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/>
+                      </svg>
+                      Comment
+                    </button>
+                    <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Save">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v16l7-5 7 5V3z"/>
+                      </svg>
+                      Save
+                    </button>
+                  </div>
+
+                  <div>
+                    <button class="flex items-center gap-2 text-gray-600 hover:text-black" aria-label="Share">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 6l-4-4-4 4"/>
+                      </svg>
+                      Share
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            `).join('');
+            
+            // Add event listeners for like buttons
+            document.querySelectorAll('.like-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                this.classList.toggle('text-pink-600');
+                const countNode = this.closest('article').querySelector('footer div:first-child .font-medium');
+                if (countNode) {
+                  const n = parseInt(countNode.textContent) || 0;
+                  countNode.textContent = this.classList.contains('text-pink-600') ? (n + 1) : Math.max(n - 1, 0);
+                }
+              });
+            });
+          } else {
+            // No posts available
+            container.innerHTML = `
+              <div class="text-center py-12">
+                <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" 
+                     alt="No posts" class="mx-auto w-64 h-64 object-cover rounded-lg">
+                <p class="mt-4 text-gray-500 text-lg">No posts yet</p>
+                <p class="text-gray-400 text-sm">Be the first to create a post!</p>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading posts:', error);
+          const container = document.getElementById('posts-container');
+          const loading = document.getElementById('loading-posts');
+          if (loading) loading.remove();
+          
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" 
+                   alt="Error" class="mx-auto w-64 h-64 object-cover rounded-lg">
+              <p class="mt-4 text-gray-500 text-lg">Error loading posts</p>
+              <p class="text-gray-400 text-sm">Please try again later</p>
+            </div>
+          `;
         });
+      }
+
+      // Logout function
+      function handleLogout() {
+        if (confirm('Are you sure you want to logout?')) {
+          fetch('/account/logout/ajax/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              window.location.href = data.redirect_url;
+            } else {
+              alert('Logout failed. Please try again.');
+            }
+          })
+          .catch(error => {
+            console.error('Logout error:', error);
+            alert('Logout failed. Please try again.');
+          });
+        }
+      }
+
+      // Utility functions
+      function escapeHtml(unsafe) {
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+      }
+
+      // Event listeners
+      document.addEventListener('DOMContentLoaded', function() {
+        // Load posts when page loads
+        loadPosts();
+
+        // Add logout event listeners
+        document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+        document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
       });
     </script>
   </body>

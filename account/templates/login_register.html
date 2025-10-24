@@ -81,7 +81,7 @@
                     <h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
                     <p class="text-sm text-gray-500 mt-2">Welcome back to SMASH!</p>
                     
-                    <form class="mt-8 space-y-6 ajax-form" action="{% url 'login_ajax' %}" method="POST">
+                    <form class="mt-8 space-y-6 ajax-form" action="{% url 'account:login_ajax' %}" method="POST">
                         {% csrf_token %}
                         <!-- Input Username -->
                         <div>
@@ -131,7 +131,7 @@
                     <h2 class="text-3xl font-bold text-gray-900">Create your account</h2>
                     <p class="text-sm text-gray-500 mt-2">Join SMASH! today.</p>
 
-                    <form class="mt-8 space-y-6 ajax-form" action="{% url 'register_ajax' %}" method="POST">
+                    <form class="mt-8 space-y-6 ajax-form" action="{% url 'account:register_ajax' %}" method="POST">
                         {% csrf_token %}
                          <!-- Input Username -->
                         <div>
