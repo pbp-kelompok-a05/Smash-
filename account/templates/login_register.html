@@ -1,22 +1,244 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="login-container" style="display:flex;min-height:100vh;background:linear-gradient(90deg,#fdfbfb,#ebedee);">
-  <div style="flex:1;display:flex;justify-content:center;align-items:center;">
-    <form class="ajax-form" action="/accounts/login/" method="POST" style="width:300px;">
-      {% csrf_token %}
-      <h2>Sign In</h2>
-      <input type="text" name="username" placeholder="Username" required><br><br>
-      <input type="password" name="password" placeholder="Password" required><br><br>
-      <button type="submit">Sign In</button>
-    </form>
-    <form class="ajax-form" action="/accounts/register/" method="POST" style="width:300px;margin-left:40px;">
-      {% csrf_token %}
-      <h2>Create Account</h2>
-      <input type="text" name="username" placeholder="Username" required><br><br>
-      <input type="password" name="password1" placeholder="Password" required><br><br>
-      <input type="password" name="password2" placeholder="Confirm Password" required><br><br>
-      <button type="submit">Register</button>
-    </form>
-  </div>
-</div>
-{% endblock %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Judul Halaman -->
+    <title>Login & Registrasi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-container {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .hidden-form {
+            opacity: 0;
+            transform: scale(0.95);
+            display: none;
+        }
+        /* Style untuk pesan error/sukses */
+        .message-box {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.875rem;
+            display: none; /* Sembunyi secara default */
+            text-align: left;
+        }
+        .message-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .message-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body class="bg-white">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        
+        <!-- Bagian Kiri (Form) -->
+        <div class="w-full md:w-1/2 lg:w-5/12 xl:w-1/3 flex justify-center items-center p-8 md:p-12 min-h-screen">
+            <div class="w-full max-w-sm">
+
+                <!-- Area untuk menampilkan pesan sukses atau error -->
+                <div id="message-area" class="message-box"></div>
+
+                <!-- Login Form -->
+                <div id="login-form" class="form-container">
+                    <h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
+                    <p class="text-sm text-gray-500 mt-2">Welcome back to SMASH!</p>
+                    
+                    <form class="mt-8 space-y-6 ajax-form" action="/accounts/ajax/login/" method="POST">
+                        {% csrf_token %}
+                        <!-- Input Username -->
+                        <div>
+                            <label for="login-username" class="block text-sm font-medium text-gray-700">Username*</label>
+                            <input id="login-username" name="username" type="text" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your username">
+                        </div>
+
+                        <!-- Input Password -->
+                        <div>
+                            <label for="login-password" class="block text-sm font-medium text-gray-700">Password*</label>
+                            <input id="login-password" name="password" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter your password">
+                        </div>
+
+                        <!-- Tombol Sign In -->
+                        <div>
+                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
+                                Sign In
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <p class="mt-6 text-center text-sm text-gray-600">
+                        Don't have an account?
+                        <a href="#" id="show-register" class="font-medium text-blue-600 hover:text-blue-500">
+                            Create account
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="form-container hidden-form">
+                    <h2 class="text-3xl font-bold text-gray-900">Create your account</h2>
+                    <p class="text-sm text-gray-500 mt-2">Join SMASH! today.</p>
+
+                    <form class="mt-8 space-y-6 ajax-form" action="/accounts/ajax/register/" method="POST">
+                        {% csrf_token %}
+                         <!-- Input Username -->
+                        <div>
+                            <label for="reg-username" class="block text-sm font-medium text-gray-700">Username*</label>
+                            <input id="reg-username" name="username" type="text" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Choose a username">
+                        </div>
+                        
+                        <!-- Input Password 1 -->
+                        <div>
+                            <label for="reg-password" class="block text-sm font-medium text-gray-700">Password*</label>
+                            <input id="reg-password" name="password1" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Enter a password">
+                        </div>
+
+                        <!-- Input Password 2 -->
+                         <div>
+                            <label for="reg-password2" class="block text-sm font-medium text-gray-700">Confirm Password*</label>
+                            <input id="reg-password2" name="password2" type="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gray-900 focus:border-gray-900 sm:text-sm" placeholder="Confirm your password">
+                        </div>
+
+                        <!-- Tombol Create Account -->
+                        <div>
+                            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
+                                Create account
+                            </button>
+                        </div>
+                    </form>
+
+                    <p class="mt-6 text-center text-sm text-gray-600">
+                        Already have an account?
+                        <a href="#" id="show-login" class="font-medium text-blue-600 hover:text-blue-500">
+                            Sign In
+                        </a>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bagian Kanan (Gradien) - Tersembunyi di Mobile -->
+        <div class="hidden md:flex w-full md:w-1/2 lg:w-7/12 xl:w-2/3 bg-gradient-to-br from-emerald-100 to-rose-100 min-h-screen">
+            <!-- Panel ini hanya untuk visual di desktop -->
+        </div>
+
+    </div>
+
+    <script>
+        // --- LOGIKA UNTUK GANTI FORM (Sudah ada sebelumnya) ---
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const showRegisterLink = document.getElementById('show-register');
+        const showLoginLink = document.getElementById('show-login');
+
+        showRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.classList.add('hidden-form');
+            setTimeout(() => {
+                registerForm.classList.remove('hidden-form');
+            }, 150);
+        });
+
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            registerForm.classList.add('hidden-form');
+            setTimeout(() => {
+                loginForm.classList.remove('hidden-form');
+            }, 150);
+        });
+
+        // --- LOGIKA AJAX DARI auth.js (Sudah diperbaiki) ---
+
+        // 1. Fungsi untuk mengambil CSRF token dari cookie
+        function getCookie(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+              const cookie = cookies[i].trim();
+              if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+              }
+            }
+          }
+          return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // 2. Fungsi untuk menampilkan pesan (Pengganti alert())
+        const messageArea = document.getElementById('message-area');
+        function showMessage(message, isSuccess = true) {
+            messageArea.textContent = message;
+            if (isSuccess) {
+                messageArea.className = 'message-box message-success';
+            } else {
+                messageArea.className = 'message-box message-error';
+            }
+            messageArea.style.display = 'block';
+        }
+
+        // 3. Event listener untuk submit form
+        document.addEventListener("submit", async function(e){
+          // Hanya jalankan jika form memiliki class 'ajax-form'
+          if(e.target.classList.contains("ajax-form")){
+            e.preventDefault(); // Mencegah submit standar
+            
+            const form = e.target;
+            const url = form.action;
+            const formData = new FormData(form);
+            
+            // Mengosongkan pesan error sebelumnya
+            messageArea.style.display = 'none';
+
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {'X-CSRFToken': csrftoken}, // Mengirim CSRF token di header
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if(data.success){
+                    // Sukses
+                    showMessage("Sukses! Selamat datang " + (data.username || ''));
+                    // Refresh halaman setelah 2 detik agar user bisa baca pesan
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    // Gagal
+                    // Merangkai pesan error
+                    let errorMessage = "Terjadi kesalahan.";
+                    if (data.errors) {
+                        // Memformat error dari Django form
+                        errorMessage = Object.keys(data.errors).map(key => {
+                            return data.errors[key].map(err => err.message || err).join(' ');
+                        }).join('\n');
+                    } else if (data.error) {
+                        errorMessage = data.error;
+                    }
+                    showMessage(errorMessage, false);
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                showMessage("Tidak dapat terhubung ke server.", false);
+            }
+          }
+        });
+    </script>
+</body>
+</html>
+
