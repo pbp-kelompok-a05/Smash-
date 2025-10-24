@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Edit News - Football News</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="bg-gray-50 w-full min-h-screen">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Back Navigation -->
+    <div class="mb-6">
+      <a href="{% url 'profil:show_views' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">
+        ← Back to Profile
+      </a>
+    </div>
+    
+    <!-- Form -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 sm:p-8 form-style">
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Edit Profile</h1>
+      </div>
+      
+      <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        {% for field in form %}
+          <div>
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              {{ field.label }}
+            </label>
+            <div class="w-full">
+              {{ field }}
+            </div>
+            {% if field.help_text %}
+              <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+            {% endif %}
+            {% for error in field.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endfor %}
+        
+        <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+          <a href="{% url 'profil:show_views' %}" class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">
+            Cancel
+          </a>
+          <button type="submit" class="order-1 sm:order-2 flex-1 bg-green-600 text-white px-6 py-3 rounded-md font-medium hover:bg-green-700 transition-colors">
+            Update Profile
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

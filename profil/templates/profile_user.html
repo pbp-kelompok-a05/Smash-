@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Profile - Smash</title>
+{% endblock meta %}
+
+{% block content %}
+{% include 'navbar.html' %}
+{% include 'sidebar.html' %}
+<div class="bg-gradient-to-br from-green-100 via-white to-pink-100 w-full pt-16 min-h-screen">
+        <div class="max-w-4xl mx-auto bg-gray-100 rounded-xl p-8 mt-6 shadow-lg">
+            <div class="overflow-y-auto flex-1">
+                <div class="bg-white rounded-xl p-6 shadow sticky top-0 z-10 mb-6">
+        <!-- Contoh isi profil -->
+                    <div class="flex items-center space-x-6">
+                        <img src="{% static 'img/default-avatar.png' %}" alt="Profil" class="rounded-full w-20 h-20" />
+                        <div>
+                            <h2 class="text-lg">Hello,</h2>
+                            <h1 id="profile-name" class="text-4xl font-extrabold">Loading...</h1>
+                            <p id="user-bio" class="text-gray-600 mt-1">
+                              {{ user.profile.bio|default:"Belum ada bio" }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'main:edit_profile' %}">
+                      <button>+ edit bio</button>
+                    </a>
+                    <div class="flex gap-3 mt-4">
+                    <a id= filter-my class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">
+                        My Posts
+                    </a>
+                    <a id=filter-bookmark class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
+                        Bookmark
+                    </a>
+                    <a id=filter-like class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
+                        Liked
+                    </a>
+                    </div>
+                </div>
+                <div id="posts-list"></div>
+                <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+                  <svg class="animate-spin h-8 w-8 text-green-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  <p class="text-gray-600 mt-3">Loading post...</p>
+                </div>
+                    <!-- Error State -->
+                <div id="error" class="hidden"></div>
+                <!-- Empty State -->
+                <div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+                  <div class="w-32 h-32 mx-auto mb-4">
+                    <img src="{% static 'image/no-post.png' %}" alt="No post available" class="w-full h-full object-contain">
+                  </div>
+                  <h3 class="text-lg font-medium text-gray-900 mb-2">No post found</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+<script>
+//belum membuat ENDPOINT
+const PROFILE_API_ENDPOINT = "{% url 'profil:show_json' %}";
+const CURRENT_USER_ID = "{{ user.id|default_if_none:'' }}";
+
+const profilname = document.getElementById('profile-name');
+const postContainer = document.getElementById('posts-list');
+const showMyPostButton = document.getElementById('filter-my');
+const showMyBookmarkButton = document.getElementById('filter-bookmark');
+const showMyLikesButton = document.getElementById('filter-like');
+const postGridContainer = document.getElementById('grid');
+const loadingSpinner = document.getElementById('loading');
+const errorMessage = document.getElementById('error');
+const emptyStateDisplay = document.getElementById('empty');
+
+//initial values
+document.getElementById('profile-name').textContent = '{{ user.username }}';
+document.getElementById('user-bio').textContent =
+  '{{ user.profile.bio|default:"Belum ada bio" }}';
+
+//state variable
+let activeFilter = 'my';
+let allPostData=[]
+let allLikedPost=[]
+// Update filter button appearance
+function updateFilterButtonsAppearance() {
+  if (!showMyPostButton || !showMyBookmarkButton || !showMyLikesButton) return;
+  
+  if (activeFilter === 'my') {
+    showMyPostButton.className = "px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition";
+    showMyBookmarkButton.className = 'px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
+    showMyLikesButton.className='px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
+  } else if (activeFilter=== 'bookmark') {
+    showMyPostButton.className = "px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition";
+    showMyBookmarkButton.className = 'px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition';
+    showMyLikesButton.className='px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
+  }
+  else{
+    showMyPostButton.className = "px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition";
+    showMyBookmarkButton.className = 'px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
+    showMyLikesButton.className='px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition';
+  }
+}
+function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+  loadingSpinner.classList.toggle('hidden', !showLoading);
+  errorMessage.classList.toggle('hidden', !showError);
+  emptyStateDisplay.classList.toggle('hidden', !showEmpty);
+}
+// Create news card element
+function buildPostCardElement(item) {
+  // --- sanitise semua input ---
+  const linkDetail = `{% url 'main:show_post' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.id);
+  const id         = DOMPurify.sanitize(item.id);
+  const title      = DOMPurify.sanitize(item.title);
+  const content    = DOMPurify.sanitize(item.content);
+  const image      = DOMPurify.sanitize(item.image || '');
+  const likeCount  = Number(item.like) || 0;
+  const commentCnt = Number(item.comment) || 0;
+  const createdAt  = new Date(item.created_at).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+
+  const authorName = DOMPurify.sanitize(item.user_name || 'Anonymous');
+
+  // --- buat elemen utama ---
+  const card = document.createElement('div');
+  card.className = 'bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden w-full';
+
+  // --- struktur HTML dalam bentuk string ---
+  card.innerHTML = `
+    <!-- Header -->
+    <div class="flex items-start p-5 pb-0">
+      <img src="https://placehold.co/40x40" alt="avatar" class="w-10 h-10 rounded-full object-cover mr-3">
+      <div class="flex-1">
+        <p class="text-sm font-bold text-gray-800">${authorName}</p>
+        <div class="flex items-center space-x-2 text-sm text-gray-500">
+          <span class="text-blue-500 font-semibold">@${authorName}</span>
+          <span>• ${createdAt}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="p-5">
+      <h2 class="text-lg font-bold text-gray-900 mb-2">${title}</h2>
+      <p class="text-gray-700 leading-relaxed mb-4">${content.substring(0, 200)}
+        ${content.length > 200 ? `<a href='${linkDetail}' class="text-blue-500 font-medium hover:underline">...view more</a>` : ''}
+      </p>
+
+      ${image ? `<img src="${image}" alt="${title}" class="rounded-xl w-full object-cover mb-4 transition-transform duration-300 hover:scale-[1.02]">` : ''}
+
+      <div class="text-sm text-gray-400 mb-3">
+        <span>${likeCount} likes</span> • 
+        <span>${commentCnt} comments</span>
+      </div>
+
+      <hr class="border-gray-100 mb-3">
+
+      <!-- Action buttons -->
+      <div class="flex justify-between text-gray-600 text-sm select-none">
+        <div class="flex space-x-6">
+          <button class="like-btn flex items-center hover:text-blue-600 transition" data-active-color="text-blue-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.125 18.75h8.25a1.125 1.125 0 001.125-1.125v-6.75a1.125 1.125 0 00-1.125-1.125h-4.189l.513-2.462a.563.563 0 00-.551-.688H10.5a.563.563 0 00-.562.562v11.438a.563.563 0 00.563.563zM6 18.75H3.75a.75.75 0 01-.75-.75V10.5a.75.75 0 01.75-.75H6v9z" />
+            </svg>
+            Like
+          </button>
+
+          <button class="dislike-btn flex items-center hover:text-red-500 transition" data-active-color="text-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 rotate-180">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.75h-8.25a1.125 1.125 0 01-1.125-1.125v-6.75a1.125 1.125 0 011.125-1.125h4.189l-.513-2.462a.563.563 0 01.551-.688h3.213a.563.563 0 01.562.562v11.438a.563.563 0 01-.563.563zM18 18.75h2.25a.75.75 0 00.75-.75V10.5a.75.75 0 00-.75-.75H18v9z" />
+            </svg>
+            Dislike
+          </button>
+
+          <button class="comment-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3h9m-9 3h5.25M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4.95-1.32L3 20.25l1.65-3.3A7.94 7.94 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Comment
+          </button>
+        </div>
+
+        <div class="flex space-x-6">
+          <button class="save-btn flex items-center hover:text-yellow-500 transition" data-active-color="text-yellow-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 3H6.75A1.5 1.5 0 005.25 4.5v15a.75.75 0 001.21.59L12 16.5l5.54 3.59a.75.75 0 001.21-.59v-15A1.5 1.5 0 0017.25 3z" />
+            </svg>
+            Save
+          </button>
+
+          <button class="share-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-5 h-5 mr-1">
+              <circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/>
+              <line x1="8" y1="12" x2="16" y2="7"/><line x1="8" y1="12" x2="16" y2="17"/>
+            </svg>
+            Share
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // --- tambahkan event listener like/dislike ---
+  const likeBtn = card.querySelector('.like-btn');
+  const dislikeBtn = card.querySelector('.dislike-btn');
+
+  likeBtn.addEventListener('click', () => {
+    const isActive = likeBtn.classList.toggle('active');
+    likeBtn.classList.toggle(likeBtn.dataset.activeColor, isActive);
+    likeBtn.querySelector('svg').setAttribute('fill', isActive ? 'currentColor' : 'none');
+
+    if (isActive) {
+      dislikeBtn.classList.remove('active', dislikeBtn.dataset.activeColor);
+      dislikeBtn.querySelector('svg').setAttribute('fill', 'none');
+    }
+  });
+
+  dislikeBtn.addEventListener('click', () => {
+    const isActive = dislikeBtn.classList.toggle('active');
+    dislikeBtn.classList.toggle(dislikeBtn.dataset.activeColor, isActive);
+    dislikeBtn.querySelector('svg').setAttribute('fill', isActive ? 'currentColor' : 'none');
+
+    if (isActive) {
+      likeBtn.classList.remove('active', likeBtn.dataset.activeColor);
+      likeBtn.querySelector('svg').setAttribute('fill', 'none');
+    }
+  });
+  return card;
+}
+
+function renderAllPostCards(postItems) {
+  postContainer.innerHTML = '';
+  postItems.forEach(postItem => {
+    const cardElement = buildPostCardElement(postItem);
+    postContainer.appendChild(cardElement);
+  });
+}
+// Fungsi filter and display post unfinished
+function filterAndDisplayPost() {
+  updateFilterButtonsAppearance();
+  
+  let filteredPost;
+  if(activeFilter=== 'my'){
+    filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
+  }
+  else if(activeFilter=== 'bookmark'){
+    filteredPost= allPostData.filter(post => post.is_bookmark === true)
+  }
+  else if (activeFilter === 'liked'){
+    filteredPost= allLikedPost.filter(post => post.is_like === true)
+  }
+  if (filteredPost.length === 0) {
+    displayPageSection({ showEmpty: true });
+  } else {
+    renderAllPostCards(filteredPost);
+  }
+}
+async function fetchPostFromServer() {
+  try {
+    displayPageSection({ showLoading: true });
+    
+    const response = await fetch(PROFILE_API_ENDPOINT, {
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch post data from server');
+    }
+
+    const postData = await response.json();
+    allPostData   = postData.post   || [];
+    allLikedPost  = postData.like   || [];
+    filterAndDisplayPost();
+  } catch (error) {
+    console.error('Error loading post:', error);
+    displayPageSection({ showError: true });
+  }
+}
+function handleShowMyPostClick() {
+  activeFilter = 'my';
+  filterAndDisplayPost();
+}
+function handleShowMyBookmarkClick() {
+  activeFilter = 'bookmark';
+  filterAndDisplayPost();
+}
+function handleShowMyLikeClick() {
+  activeFilter = 'liked';
+  filterAndDisplayPost();
+}
+//belum membuat fetchPostfromserver
+function initializePostPage() {
+  showMyPostButton.addEventListener('click', handleShowMyPostClick);
+  showMyBookmarkButton.addEventListener('click', handleShowMyBookmarkClick);
+  showMyLikesButton.addEventListener('click', handleShowMyLikeClick);
+  fetchPostFromServer();
+}
+
+initializePostPage()
+
+document.addEventListener('postAdded', function() {
+    // Refresh data without page reload
+    fetchPostFromServer();
+});
+</script>
+{% endblock content %}
