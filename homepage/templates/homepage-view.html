@@ -14,7 +14,13 @@
         <a href="/accounts/">Login</a>
       {% endif %}
     </header>
-    <section id="feed"></section>
+    <section id="feed">
+      {% for post in posts %}
+        {% include 'main/components/card.html' %}
+      {% empty %}
+        <p class="text-gray-500 italic">No posts yet.</p>
+      {% endfor %}
+    </section>
   </main>
 </div>
 

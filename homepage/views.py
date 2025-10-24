@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 
 def homepage_view(request):
-    return render(request, "home/homepage-view.html")
+    return render(request, "homepage-view.html")
 
 def api_feed(request):
     posts = [
