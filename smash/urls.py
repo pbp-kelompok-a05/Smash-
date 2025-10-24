@@ -28,11 +28,8 @@ urlpatterns = [
     path("posts/", include("post.urls")),
     path("comments/", include("comment.urls")),
     path("reports/", include("report.urls")),
-<<<<<<< HEAD
     path("profil/", include("profil.urls")),
-=======
     path("ads/", include("ads.urls")),
->>>>>>> 2cf51eed652ce3ef535bf1d20fa42dbd4f189ceb
     # optional: fallback redirect dari /accounts/login/ -> named 'login'
     path(
         "accounts/login/", RedirectView.as_view(pattern_name="login", permanent=False)
