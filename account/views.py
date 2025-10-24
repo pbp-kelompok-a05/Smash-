@@ -52,7 +52,7 @@ def logout_ajax(request):
             {
                 "success": True,
                 "redirect_url": reverse(
-                    "login_register"
+                    "login_register.html"
                 ),  # Redirect kembali ke login
             }
         )
