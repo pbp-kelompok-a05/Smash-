@@ -35,6 +35,14 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "nathanael-leander-smash.pbp.cs.ui.ac.id"]
 
+# Tambahan entri url proyek pws
+CSRF_TRUSTED_ORIGINS = [
+    "https://nathanael-leander-smash.pbp.cs.ui.ac.id"
+]
+
+LOGIN_URL = "/login/"            # redirect default untuk login_required
+LOGIN_REDIRECT_URL = "/"         # setelah login sukses
+LOGOUT_REDIRECT_URL = "/"        # setelah logout
 
 # Application definition
 
@@ -73,8 +81,8 @@ TEMPLATES = [
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.request",
+            "context_processors": [                
+                "django.template.context_processors.request",            
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",                
             ],
