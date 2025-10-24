@@ -2,12 +2,18 @@
 <nav class="sidebar" id="sidebar">
   <!-- THREAD SECTION -->
   <div class="sidebar-section">
-    <h4 class="sidebar-title">Thread</h4>
+    <h4 class="sidebar-title">THREAD</h4>
     <ul>
       <li class="sidebar-item active">
         <a href="{% url 'recent_thread' %}">
           <i class="fas fa-clock"></i>
           <span>Recent</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#">
+          <i class="fas fa-tags"></i>
+          <span>For You</span>
         </a>
       </li>
       <li class="sidebar-item">
@@ -21,8 +27,14 @@
 
   <!-- MENU SECTION -->
   <div class="sidebar-section">
-    <h4 class="sidebar-title">Menu</h4>
+    <h4 class="sidebar-title">MENU</h4>
     <ul>
+      <li class="sidebar-item">
+        <a href="#">
+          <i class="fas fa-bell"></i>
+          <span>Notification</span>
+        </a>
+      </li>
       <li class="sidebar-item">
         <a href="{% url 'bookmark' %}">
           <i class="fas fa-bookmark"></i>
@@ -35,55 +47,82 @@
           <span>Profile</span>
         </a>
       </li>
+      <li class="sidebar-item">
+        <a href="#">
+          <i class="fas fa-envelope"></i>
+          <span>Message</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#">
+          <i class="fas fa-users"></i>
+          <span>Communities</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#">
+          <i class="fas fa-cog"></i>
+          <span>Settings</span>
+        </a>
+      </li>
     </ul>
   </div>
 
   <!-- OTHERS SECTION -->
   <div class="sidebar-section">
-    <h4 class="sidebar-title">Others</h4>
+    <h4 class="sidebar-title">OTHERS</h4>
     <ul>
       <li class="sidebar-item">
         <a href="{% url 'about' %}">
           <i class="fas fa-info-circle"></i>
-          <span>Tentang Smash</span>
+          <span>Tentang SMASH</span>
         </a>
       </li>
       <li class="sidebar-item">
         <a href="{% url 'contact' %}">
-          <i class="fas fa-envelope"></i>
+          <i class="fas fa-phone"></i>
           <span>Hubungi Kami</span>
         </a>
       </li>
     </ul>
+  </div>
+
+  <div class="sidebar-footer">
+    <p>© 2025 SMASH, PBP Kelompok A05.<br>All rights reserved</p>
   </div>
 </nav>
 
 <style>
 /* ===== Sidebar Struktur ===== */
 .sidebar {
-  width: 240px;
+  width: 260px;
   background: #fff;
   border-right: 1px solid #eee;
   height: 100vh;
-  padding: 16px 0;
+  padding: 20px 0;
   position: fixed;
   top: 0;
   left: 0;
   overflow-y: auto;
   transition: transform 0.3s ease;
   z-index: 900;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
+/* ===== Bagian Section ===== */
 .sidebar-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .sidebar-title {
-  font-size: 14px;
+  font-size: 13px;
   text-transform: uppercase;
   font-weight: 600;
   color: #999;
-  margin: 0 16px 8px 16px;
+  margin: 0 22px 10px;
+  letter-spacing: 0.5px;
 }
 
 .sidebar ul {
@@ -99,40 +138,50 @@
 .sidebar-item a {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #444;
+  gap: 14px;
+  color: #333;
   text-decoration: none;
-  padding: 10px 16px;
-  border-left: 3px solid transparent;
-  border-radius: 6px;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  padding: 12px 22px;
+  border-left: 4px solid transparent;
+  border-radius: 0 10px 10px 0;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   font-size: 15px;
 }
 
 .sidebar-item a i {
-  font-size: 16px;
-  width: 18px;
+  font-size: 17px;
+  width: 20px;
   text-align: center;
   color: #6a1b9a;
 }
 
-/* ===== Efek Hover ===== */
+/* ===== Hover ===== */
 .sidebar-item a:hover {
-  background: #ffe6f7;
-  border-left: 3px solid #c71585;
+  background: #fde6f3;
+  border-left: 4px solid #b048a3;
   color: #6a1b9a;
 }
 
-/* ===== Tombol Aktif ===== */
+/* ===== Aktif ===== */
 .sidebar-item.active a {
-  background: #ffe6f7;
-  border-left: 3px solid #a64ac9; /* ungu lembut */
+  background: #fde6f3;
+  border-left: 4px solid #a64ac9; /* ungu */
   color: #6a1b9a;
   font-weight: 600;
 }
 
 .sidebar-item.active a i {
   color: #6a1b9a;
+}
+
+/* ===== Footer ===== */
+.sidebar-footer {
+  padding: 20px;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+  line-height: 1.4;
 }
 
 /* ===== Responsif ===== */
