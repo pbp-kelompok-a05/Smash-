@@ -23,11 +23,13 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include("post.urls")),         # contoh
-    path("", include("account.urls")),      # <-- pastikan account.urls di-include (root)
+    path("", include("account.urls")),     
+    path("", include("main.urls")),
+    path("", include("post.urls")),        
     path("comments/", include("comment.urls")),
     path("reports/", include("report.urls")),
 
     # optional: fallback redirect dari /accounts/login/ -> named 'login'
     path("accounts/login/", RedirectView.as_view(pattern_name="login", permanent=False)),
+    path("accounts/register/", RedirectView.as_view(pattern_name="register", permanent=False)),
 ]
