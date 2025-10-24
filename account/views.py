@@ -6,6 +6,9 @@ from django.shortcuts import render
 def login_register_view(request):
     return render(request, "accounts/login_register.html")
 
+def register_page_view(request):
+    return render(request, "accounts/register.html")
+
 def register_ajax(request):
     if request.method == "POST":
         form = UserCreationForm(request.POST)

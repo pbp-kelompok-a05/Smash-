@@ -1,0 +1,81 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Account — Smash</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+  </style>
+</head>
+<body class="bg-white">
+
+  <div class="flex min-h-screen">
+    
+    <div class="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+      <div class="mx-auto w-full max-w-sm lg:w-96">
+        
+        <div>
+          <h2 class="mt-6 text-3xl font-bold tracking-tight text-gray-900">Create your account</h2>
+          <p class="mt-2 text-sm text-gray-600">Join SMASH! today.</p>
+        </div>
+
+        <div class="mt-8">
+          <div class="mt-6">
+            <form class="ajax-form space-y-6" action="/accounts/register/" method="POST">
+              {% csrf_token %}
+              
+              <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Username*</label>
+                <div class="mt-1">
+                  <input id="username" name="username" type="text" placeholder="Enter your username" required
+                         class="block w-full appearance-none rounded-full border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+              </div>
+
+              <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password*</label>
+                <div class="mt-1">
+                  <input id="password" name="password1" type="password" placeholder="Enter your password" required
+                         class="block w-full appearance-none rounded-full border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+              </div>
+              
+              <div>
+                <label for="password2" class="block text-sm font-medium text-gray-700">Confirm Password*</label>
+                <div class="mt-1">
+                  <input id="password2" name="password2" type="password" placeholder="Confirm your password" required
+                         class="block w-full appearance-none rounded-full border border-gray-300 px-4 py-3 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+              </div>
+
+              <div>
+                <button type="submit" 
+                        class="w-full flex justify-center py-3 px-4 rounded-full shadow-sm text-sm font-semibold text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black">
+                  Create account
+                </button>
+              </div>
+            </form>
+
+            <p class="mt-8 text-center text-sm text-gray-600">
+              Already have an account?
+              <a href="/accounts/" class="font-medium text-blue-600 hover:text-blue-500">Sign In</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden lg:block relative flex-1">
+      <div class="absolute inset-0 h-full w-full bg-gradient-to-br from-emerald-50 to-pink-50"></div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+</body>
+</html>

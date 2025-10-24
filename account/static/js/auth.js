@@ -20,17 +20,33 @@ document.addEventListener("submit", async function(e){
     const form = e.target;
     const url = form.action;
     const formData = new FormData(form);
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {'X-CSRFToken': csrftoken},
-      body: formData
-    });
-    const data = await res.json();
-    if(data.success){
-      alert("Success! Welcome " + (data.username || ''));
-      location.reload();
-    } else {
-      alert("Error: " + JSON.stringify(data.errors || data));
+    
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {'X-CSRFToken': csrftoken},
+        body: formData
+      });
+      
+      const data = await res.json();
+      
+      if(data.success){
+        alert("Success! Welcome " + (data.username || ''));
+        window.location.href = '/'; 
+      } else {
+        let errorMsg = "An error occurred.";
+        if (data.errors) {
+            if (typeof data.errors === 'object') {
+                errorMsg = Object.values(data.errors).map(err => err[0]).join('\n');
+            } else {
+                errorMsg = JSON.stringify(data.errors);
+            }
+        }
+        alert("Error: " + errorMsg);
+      }
+    } catch (error) {
+        console.error("Fetch error:", error);
+        alert("Error: Tidak dapat terhubung ke server. Periksa koneksi Anda dan coba lagi.");
     }
   }
 });
