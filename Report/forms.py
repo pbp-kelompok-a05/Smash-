@@ -1,596 +1,307 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils.html import strip_tags
-from .models import Report, ReportSettings
-
+from .models import Report
 
 class ReportForm(forms.ModelForm):
     """
-    Form untuk membuat laporan baru oleh pengguna.
-    
-    Features:
-    - Validasi XSS protection pada description
-    - Validasi evidence (gambar atau URL, tidak kedua-duanya)
-    - Validasi khusus untuk laporan SARA
-    - AJAX compatible dengan error handling
+    Form untuk membuat laporan baru oleh user
     """
-    
-    # Field tambahan untuk konfirmasi
-    confirm_report = forms.BooleanField(
-        required=True,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input',
-            'required': 'required'
-        }),
-        label='Saya yakin dengan laporan ini dan memahami konsekuensinya',
-        help_text='Dengan mencentang ini, Anda menyatakan bahwa laporan ini dibuat dengan itikad baik.'
-    )
-    
     class Meta:
         model = Report
-        fields = ['reason', 'description', 'is_anonymous', 'evidence_image', 'evidence_url']
-        
+        fields = ['content_type', 'content_id', 'category', 'description']
         widgets = {
-            'reason': forms.Select(attrs={
+            'content_type': forms.Select(attrs={
                 'class': 'form-select',
-                'required': 'required',
-                'data-ajax-target': 'reason-select'
+                'id': 'content_type',
+                'required': True,
+            }),
+            'content_id': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'content_id',
+                'required': True,
+                'min': 1,
+            }),
+            'category': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'category',
+                'required': True,
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
+                'id': 'description',
                 'rows': 4,
-                'placeholder': 'Jelaskan secara detail mengapa konten ini dilaporkan...',
-                'data-min-chars': '10',
-                'maxlength': '1000'
-            }),
-            'is_anonymous': forms.CheckboxInput(attrs={
-                'class': 'form-check-input',
-                'data-ajax-target': 'anonymous-checkbox'
-            }),
-            'evidence_image': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': 'image/*',
-                'data-max-size': '5242880'  # 5MB
-            }),
-            'evidence_url': forms.URLInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'https://example.com/bukti...',
-                'data-ajax-target': 'evidence-url'
+                'placeholder': 'Jelaskan alasan pelaporan secara detail...',
+                'maxlength': 1000,
             }),
         }
-        
         labels = {
-            'reason': 'Alasan Pelaporan *',
-            'description': 'Deskripsi Tambahan',
-            'is_anonymous': 'Laporkan secara anonim',
-            'evidence_image': 'Unggah Bukti Gambar',
-            'evidence_url': 'Tautan Bukti',
+            'content_type': 'Jenis Konten',
+            'content_id': 'ID Konten',
+            'category': 'Kategori Pelanggaran',
+            'description': 'Deskripsi Laporan',
         }
-        
         help_texts = {
-            'reason': 'Pilih alasan utama mengapa Anda melaporkan konten ini.',
-            'description': 'Jelaskan secara detail untuk membantu moderator memahami laporan Anda. (maks 1000 karakter)',
-            'is_anonymous': 'Identitas Anda tidak akan ditampilkan kepada pemilik konten.',
-            'evidence_image': 'Format: JPG, PNG, GIF. Maksimal 5MB.',
-            'evidence_url': 'Tautan ke bukti pendukung seperti screenshot atau link relevan.',
+            'content_id': 'Masukkan ID dari post atau komentar yang ingin dilaporkan',
+            'description': 'Wajib diisi untuk kategori SARA dan Konten Tidak Senonoh',
         }
 
     def __init__(self, *args, **kwargs):
-        """
-        Initialize form dengan custom settings
-        """
-        self.reported_object = kwargs.pop('reported_object', None)
-        self.reporter = kwargs.pop('reporter', None)
         super().__init__(*args, **kwargs)
+        # Customize choice labels untuk lebih user-friendly
+        self.fields['content_type'].choices = [
+            ('post', '📝 Post'),
+            ('comment', '💬 Komentar'),
+        ]
         
-        # Set required fields
-        self.fields['reason'].required = True
-        
-        # Dynamic help text untuk SARA
-        self.fields['reason'].help_text += (
-            " <strong>Khusus untuk laporan SARA: harap berikan penjelasan detail.</strong>"
-        )
+        self.fields['category'].choices = [
+            ('sara', '🚫 SARA (Suku, Agama, Ras, Antar-golongan)'),
+            ('spam', '📢 Spam atau Iklan Tidak Sah'),
+            ('inappropriate', '🔞 Konten Tidak Senonoh'),
+            ('other', '❓ Lainnya'),
+        ]
+
+    def clean_content_id(self):
+        """
+        Validasi bahwa content_id harus positif
+        """
+        content_id = self.cleaned_data.get('content_id')
+        if content_id <= 0:
+            raise ValidationError('ID konten harus berupa angka positif')
+        return content_id
 
     def clean_description(self):
         """
-        Clean dan validasi description:
-        - Strip HTML tags untuk prevent XSS
-        - Validasi panjang minimum untuk SARA
-        - Validasi konten tidak kosong
+        Validasi deskripsi untuk kategori tertentu
         """
         description = self.cleaned_data.get('description', '').strip()
+        category = self.cleaned_data.get('category')
         
-        # Strip HTML tags untuk prevent XSS
-        cleaned_description = strip_tags(description)
-        
-        # Jika description kosong, return tanpa validasi lebih lanjut
-        if not cleaned_description:
-            return cleaned_description
-        
-        # Validasi panjang minimum untuk SARA
-        reason = self.cleaned_data.get('reason')
-        if reason == Report.REASON_SARA and len(cleaned_description) < 10:
+        # Untuk kategori SARA dan inappropriate, deskripsi wajib diisi
+        if category in ['sara', 'inappropriate'] and not description:
             raise ValidationError(
-                "Untuk laporan SARA, harap jelaskan secara detail (minimal 10 karakter)."
+                f'Deskripsi wajib diisi untuk kategori {self.get_category_display(category)}'
             )
         
-        return cleaned_description
-
-    def clean_evidence_image(self):
-        """
-        Validasi evidence image:
-        - Size validation (max 5MB)
-        - File type validation
-        """
-        evidence_image = self.cleaned_data.get('evidence_image')
-        
-        if evidence_image:
-            # Validasi ukuran file (max 5MB)
-            if evidence_image.size > 5 * 1024 * 1024:
-                raise ValidationError("Ukuran file terlalu besar (maksimal 5MB)")
+        # Batasi panjang deskripsi
+        if len(description) > 1000:
+            raise ValidationError('Deskripsi maksimal 1000 karakter')
             
-            # Validasi tipe file
-            valid_extensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
-            extension = evidence_image.name.split('.')[-1].lower()
-            if extension not in valid_extensions:
-                raise ValidationError(
-                    f"Format file tidak didukung. Gunakan: {', '.join(valid_extensions)}"
-                )
-        
-        return evidence_image
+        return description
 
-    def clean_evidence_url(self):
+    def get_category_display(self, category_code):
         """
-        Validasi evidence URL:
-        - Format URL yang valid
-        - Domain validation (optional)
+        Helper method untuk mendapatkan display name dari category code
         """
-        evidence_url = self.cleaned_data.get('evidence_url', '').strip()
-        
-        if evidence_url:
-            # Validasi format URL dasar
-            if not evidence_url.startswith(('http://', 'https://')):
-                raise ValidationError("Masukkan URL yang valid (dimulai dengan http:// atau https://)")
-            
-            # Validasi domain umum (optional)
-            suspicious_domains = ['localhost', '127.0.0.1', 'example.com']
-            if any(domain in evidence_url for domain in suspicious_domains):
-                raise ValidationError("URL tidak valid.")
-        
-        return evidence_url
-
-    def clean(self):
-        """
-        Validasi cross-field:
-        - Evidence: hanya gambar atau URL, tidak kedua-duanya
-        - Validasi reporter dan reported_object
-        - Validasi duplicate reports
-        """
-        cleaned_data = super().clean()
-        
-        evidence_image = cleaned_data.get('evidence_image')
-        evidence_url = cleaned_data.get('evidence_url')
-        reason = cleaned_data.get('reason')
-        description = cleaned_data.get('description', '')
-        is_anonymous = cleaned_data.get('is_anonymous', False)
-
-        # Validasi evidence: hanya satu yang boleh diisi
-        if evidence_image and evidence_url:
-            raise ValidationError({
-                'evidence_image': "Pilih salah satu: unggah gambar atau masukkan tautan, tidak kedua-duanya.",
-                'evidence_url': "Pilih salah satu: unggah gambar atau masukkan tautan, tidak kedua-duanya."
-            })
-
-        # Validasi khusus untuk laporan SARA
-        if reason == Report.REASON_SARA:
-            if not description or len(description.strip()) < 10:
-                self.add_error(
-                    'description',
-                    "Untuk laporan SARA, harap berikan penjelasan detail (minimal 10 karakter)."
-                )
-            
-            # Untuk SARA, evidence sangat disarankan
-            if not evidence_image and not evidence_url:
-                self.add_error(
-                    'evidence_image',
-                    "Untuk laporan SARA, sangat disarankan untuk menyertakan bukti pendukung."
-                )
-
-        # Validasi reporter dan reported_object
-        if not self.reporter:
-            raise ValidationError("Pengguna tidak valid.")
-        
-        if not self.reported_object:
-            raise ValidationError("Konten yang dilaporkan tidak valid.")
-
-        # Validasi: user tidak bisa melaporkan konten sendiri
-        if hasattr(self.reported_object, 'author') and self.reported_object.author == self.reporter:
-            raise ValidationError("Anda tidak dapat melaporkan konten yang Anda buat sendiri.")
-
-        # Validasi duplicate report (jika diperlukan)
-        if self.reporter and self.reported_object:
-            try:
-                from django.contrib.contenttypes.models import ContentType
-                content_type = ContentType.objects.get_for_model(self.reported_object)
-                
-                existing_report = Report.objects.filter(
-                    reporter=self.reporter,
-                    content_type=content_type,
-                    object_id=self.reported_object.id,
-                    status__in=[Report.STATUS_PENDING, Report.STATUS_UNDER_REVIEW]
-                ).exists()
-                
-                if existing_report:
-                    raise ValidationError(
-                        "Anda sudah melaporkan konten ini sebelumnya. Laporan Anda sedang ditinjau."
-                    )
-            except Exception:
-                # Skip duplicate check jika ada error
-                pass
-
-        return cleaned_data
-
-    def save(self, commit=True):
-        """
-        Override save untuk set reporter dan reported_object
-        """
-        instance = super().save(commit=False)
-        
-        if self.reporter:
-            instance.reporter = self.reporter
-        
-        if self.reported_object:
-            from django.contrib.contenttypes.models import ContentType
-            instance.content_type = ContentType.objects.get_for_model(self.reported_object)
-            instance.object_id = self.reported_object.id
-        
-        if commit:
-            instance.save()
-        
-        return instance
+        category_dict = dict(self.fields['category'].choices)
+        return category_dict.get(category_code, category_code)
 
 
-class ReportAdminForm(forms.ModelForm):
+class ReportUpdateForm(forms.ModelForm):
     """
-    Form untuk admin mengelola laporan.
-    
-    Features:
-    - Semua field tersedia
-    - Validasi status transitions
-    - Auto-set resolved_by
+    Form untuk mengupdate status laporan oleh admin
     """
-    
-    # Field tambahan untuk actions cepat
-    quick_action = forms.ChoiceField(
+    admin_notes = forms.CharField(
         required=False,
-        choices=[
-            ('', '--- Pilih Aksi Cepat ---'),
-            ('mark_reviewed', 'Tandai Sedang Ditinjau'),
-            ('resolve_remove', 'Selesaikan & Hapus Konten'),
-            ('resolve_warning', 'Selesaikan & Beri Peringatan'),
-            ('reject', 'Tolak Laporan'),
-        ],
-        widget=forms.Select(attrs={
-            'class': 'form-select',
-            'data-ajax-action': 'quick-action'
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Catatan internal untuk tim moderator...',
+            'maxlength': 500,
         }),
-        label='Aksi Cepat'
+        label='Catatan Admin',
+        help_text='Catatan internal yang tidak dilihat oleh user yang melaporkan'
     )
-    
-    # Field untuk notifikasi
-    notify_reporter = forms.BooleanField(
-        initial=True,
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input'
-        }),
-        label='Kirim notifikasi ke pelapor',
-        help_text='Pelapor akan mendapat email tentang update status laporan.'
-    )
-    
+
     class Meta:
         model = Report
-        fields = '__all__'
-        
+        fields = ['status', 'handled_by']
         widgets = {
             'status': forms.Select(attrs={
                 'class': 'form-select',
-                'data-ajax-target': 'status-select'
+                'id': 'status-update',
             }),
-            'reason': forms.Select(attrs={
-                'class': 'form-select',
-                'readonly': 'readonly'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'readonly': 'readonly'
-            }),
-            'admin_notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Catatan internal untuk moderator...'
-            }),
-            'action_taken': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Jelaskan tindakan yang dilakukan...'
-            }),
-            'resolved_by': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'resolved_at': forms.DateTimeInput(attrs={
-                'class': 'form-control',
-                'type': 'datetime-local'
-            }),
-            'reporter': forms.Select(attrs={
-                'class': 'form-select'
-            }),
+            'handled_by': forms.HiddenInput(),  # Diset otomatis oleh view
         }
-        
         labels = {
             'status': 'Status Laporan',
-            'admin_notes': 'Catatan Admin',
-            'action_taken': 'Tindakan yang Diambil',
-            'resolved_by': 'Diselesaikan Oleh',
-            'resolved_at': 'Diselesaikan Pada',
-        }
-        
-        help_texts = {
-            'admin_notes': 'Catatan internal yang tidak dilihat oleh pelapor.',
-            'action_taken': 'Deskripsi tindakan yang akan ditampilkan ke pelapor.',
         }
 
     def __init__(self, *args, **kwargs):
-        """
-        Initialize form dengan custom settings untuk admin
-        """
-        self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
-        
-        # Set resolved_by ke current user secara default
-        if self.current_user and not self.instance.resolved_by:
-            self.fields['resolved_by'].initial = self.current_user
-        
-        # Make some fields readonly untuk instance yang sudah ada
-        if self.instance and self.instance.pk:
-            readonly_fields = ['reporter', 'reason', 'description', 'evidence_image', 'evidence_url']
-            for field in readonly_fields:
-                if field in self.fields:
-                    self.fields[field].widget.attrs['readonly'] = True
-                    self.fields[field].widget.attrs['class'] = 'form-control-plaintext'
+        # Custom status choices dengan label yang lebih informatif
+        self.fields['status'].choices = [
+            ('pending', '⏳ Menunggu Review'),
+            ('under_review', '🔍 Sedang Ditinjau'),
+            ('resolved', '✅ Selesai - Konten Ditindak'),
+            ('dismissed', '❌ Ditolak - Laporan Tidak Valid'),
+        ]
 
     def clean_status(self):
         """
         Validasi perubahan status
         """
         status = self.cleaned_data.get('status')
-        old_status = self.instance.status if self.instance.pk else None
+        instance = self.instance
         
-        # Validasi: hanya admin yang bisa mengubah status
-        if status != old_status and not getattr(self, 'current_user', None):
-            raise ValidationError("Hanya admin yang dapat mengubah status laporan.")
-        
+        # Jika laporan sudah resolved/dismissed, tidak bisa kembali ke pending
+        if instance.pk and instance.status in ['resolved', 'dismissed'] and status == 'pending':
+            raise ValidationError(
+                'Laporan yang sudah selesai tidak bisa dikembalikan ke status menunggu'
+            )
+            
         return status
 
-    def clean_resolved_by(self):
-        """
-        Validasi resolved_by
-        """
-        resolved_by = self.cleaned_data.get('resolved_by')
-        status = self.cleaned_data.get('status')
-        
-        # Jika status resolved, resolved_by harus diisi
-        if status == Report.STATUS_RESOLVED and not resolved_by:
-            if self.current_user:
-                resolved_by = self.current_user
-            else:
-                raise ValidationError("Harap tentukan admin yang menyelesaikan laporan.")
-        
-        return resolved_by
 
-    def clean(self):
-        """
-        Validasi cross-field untuk admin form
-        """
-        cleaned_data = super().clean()
-        
-        status = cleaned_data.get('status')
-        action_taken = cleaned_data.get('action_taken')
-        quick_action = cleaned_data.get('quick_action')
-        
-        # Validasi: jika status resolved, action_taken harus diisi
-        if status == Report.STATUS_RESOLVED and not action_taken and not quick_action:
-            self.add_error(
-                'action_taken',
-                "Harap jelaskan tindakan yang dilakukan untuk laporan yang diselesaikan."
-            )
-        
-        # Process quick action
-        if quick_action:
-            if quick_action == 'mark_reviewed':
-                cleaned_data['status'] = Report.STATUS_UNDER_REVIEW
-            elif quick_action == 'resolve_remove':
-                cleaned_data['status'] = Report.STATUS_RESOLVED
-                cleaned_data['action_taken'] = 'Konten telah dihapus karena melanggar aturan.'
-            elif quick_action == 'resolve_warning':
-                cleaned_data['status'] = Report.STATUS_RESOLVED
-                cleaned_data['action_taken'] = 'Peringatan telah diberikan kepada pemilik konten.'
-            elif quick_action == 'reject':
-                cleaned_data['status'] = Report.STATUS_REJECTED
-                cleaned_data['action_taken'] = 'Laporan ditolak karena tidak cukup bukti atau tidak melanggar aturan.'
-        
-        return cleaned_data
-
-    def save(self, commit=True):
-        """
-        Override save untuk handle auto-fields
-        """
-        instance = super().save(commit=False)
-        
-        # Auto-set resolved_by jika status berubah ke resolved
-        if instance.status == Report.STATUS_RESOLVED and not instance.resolved_by:
-            instance.resolved_by = self.current_user
-        
-        # Set current user untuk tracking
-        if hasattr(instance, '_current_user'):
-            instance._current_user = self.current_user
-        
-        if commit:
-            instance.save()
-        
-        return instance
-
-
-class ReportSettingsForm(forms.ModelForm):
+class ReportFilterForm(forms.Form):
     """
-    Form untuk pengaturan sistem pelaporan
+    Form untuk filtering laporan di admin dashboard
     """
+    status = forms.ChoiceField(
+        required=False,
+        choices=[('', 'Semua Status')] + list(Report.STATUS_CHOICES),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()',
+        }),
+        label='Filter Status'
+    )
     
-    class Meta:
-        model = ReportSettings
-        fields = '__all__'
-        
-        widgets = {
-            'max_reports_per_day': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '1',
-                'max': '50'
-            }),
-            'auto_reject_after_days': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '1',
-                'max': '365'
-            }),
-            'notify_admins_on_report': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-            'notify_reporter_on_update': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-            'allow_anonymous_reports': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-            'require_evidence': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-        }
-        
-        labels = {
-            'max_reports_per_day': 'Maksimal Laporan per Hari per User',
-            'auto_reject_after_days': 'Auto Reject setelah Hari',
-            'notify_admins_on_report': 'Notifikasi Admin pada Laporan Baru',
-            'notify_reporter_on_update': 'Notifikasi Pelapor pada Update',
-            'allow_anonymous_reports': 'Izinkan Laporan Anonim',
-            'require_evidence': 'Wajibkan Bukti untuk Laporan Tertentu',
-        }
-        
-        help_texts = {
-            'max_reports_per_day': 'Batas jumlah laporan yang bisa dibuat user dalam sehari untuk mencegah spam.',
-            'auto_reject_after_days': 'Laporan pending otomatis ditolak setelah hari tertentu (0 untuk non-aktif).',
-            'notify_admins_on_report': 'Admin akan menerima email ketika ada laporan baru.',
-            'notify_reporter_on_update': 'Pelapor akan menerima email ketika status laporan berubah.',
-            'allow_anonymous_reports': 'User dapat memilih untuk melaporkan secara anonim.',
-            'require_evidence': 'User wajib menyertakan bukti untuk laporan SARA dan hak cipta.',
-        }
-
-    def clean_max_reports_per_day(self):
-        """Validasi max reports per day"""
-        max_reports = self.cleaned_data.get('max_reports_per_day')
-        if max_reports < 1:
-            raise ValidationError("Nilai harus lebih besar dari 0.")
-        if max_reports > 50:
-            raise ValidationError("Nilai tidak boleh lebih dari 50.")
-        return max_reports
-
-    def clean_auto_reject_after_days(self):
-        """Validasi auto reject days"""
-        days = self.cleaned_data.get('auto_reject_after_days')
-        if days < 0:
-            raise ValidationError("Nilai tidak boleh negatif.")
-        if days > 365:
-            raise ValidationError("Nilai tidak boleh lebih dari 365 hari.")
-        return days
+    category = forms.ChoiceField(
+        required=False,
+        choices=[('', 'Semua Kategori')] + list(Report.CATEGORY_CHOICES),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()',
+        }),
+        label='Filter Kategori'
+    )
+    
+    date_range = forms.ChoiceField(
+        required=False,
+        choices=[
+            ('', 'Semua Waktu'),
+            ('today', 'Hari Ini'),
+            ('week', '7 Hari Terakhir'),
+            ('month', '30 Hari Terakhir'),
+        ],
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()',
+        }),
+        label='Rentang Waktu'
+    )
 
 
 class ReportSearchForm(forms.Form):
     """
-    Form untuk pencarian dan filter laporan (admin)
+    Form untuk pencarian laporan
     """
+    SEARCH_CHOICES = [
+        ('reporter', 'Pelapor'),
+        ('content_id', 'ID Konten'),
+        ('description', 'Deskripsi'),
+    ]
     
-    STATUS_CHOICES = [('', 'Semua Status')] + Report.STATUS_CHOICES
-    REASON_CHOICES = [('', 'Semua Alasan')] + Report.REASON_CHOICES
-    
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        required=False,
+    search_type = forms.ChoiceField(
+        choices=SEARCH_CHOICES,
+        initial='content_id',
         widget=forms.Select(attrs={
             'class': 'form-select',
-            'data-ajax-filter': 'status'
-        })
+        }),
+        label='Cari Berdasarkan'
     )
     
-    reason = forms.ChoiceField(
-        choices=REASON_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'form-select',
-            'data-ajax-filter': 'reason'
-        })
-    )
-    
-    date_from = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date',
-            'placeholder': 'Dari tanggal...'
-        })
-    )
-    
-    date_to = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date',
-            'placeholder': 'Sampai tanggal...'
-        })
-    )
-    
-    search = forms.CharField(
+    search_query = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Cari berdasarkan pelapor atau deskripsi...',
-            'data-ajax-search': 'true'
-        })
+            'placeholder': 'Masukkan kata kunci pencarian...',
+        }),
+        label='Kata Kunci'
     )
+    
+    def clean_search_query(self):
+        """
+        Validasi query pencarian
+        """
+        query = self.cleaned_data.get('search_query', '').strip()
+        if query and len(query) < 2:
+            raise ValidationError('Kata kunci pencarian minimal 2 karakter')
+        return query
 
-    def clean_date_from(self):
-        date_from = self.cleaned_data.get('date_from')
-        if date_from:
-            from django.utils import timezone
-            if date_from > timezone.now().date():
-                raise ValidationError("Tanggal tidak boleh di masa depan.")
-        return date_from
 
-    def clean_date_to(self):
-        date_to = self.cleaned_data.get('date_to')
-        if date_to:
-            from django.utils import timezone
-            if date_to > timezone.now().date():
-                raise ValidationError("Tanggal tidak boleh di masa depan.")
-        return date_to
-
+class BulkReportActionForm(forms.Form):
+    """
+    Form untuk aksi bulk pada laporan (admin)
+    """
+    ACTION_CHOICES = [
+        ('', '--- Pilih Aksi ---'),
+        ('mark_under_review', 'Tandai Sedang Ditinjau'),
+        ('mark_resolved', 'Tandai Selesai'),
+        ('mark_dismissed', 'Tandai Ditolak'),
+        ('delete', 'Hapus Laporan Terpilih'),
+    ]
+    
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+        }),
+        label='Aksi Massal'
+    )
+    
+    reports = forms.ModelMultipleChoiceField(
+        queryset=Report.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+        required=True,
+        label='Laporan Terpilih'
+    )
+    
     def clean(self):
+        """
+        Validasi aksi bulk
+        """
         cleaned_data = super().clean()
-        date_from = cleaned_data.get('date_from')
-        date_to = cleaned_data.get('date_to')
+        action = cleaned_data.get('action')
+        reports = cleaned_data.get('reports')
         
-        if date_from and date_to and date_from > date_to:
-            raise ValidationError({
-                'date_from': "Tanggal 'dari' tidak boleh setelah tanggal 'sampai'.",
-                'date_to': "Tanggal 'sampai' tidak boleh sebelum tanggal 'dari'."
-            })
-        
+        if action == 'delete' and reports and reports.count() > 10:
+            raise ValidationError(
+                'Maksimal 10 laporan dapat dihapus sekaligus untuk keamanan'
+            )
+            
         return cleaned_data
+
+
+# Form untuk AJAX requests
+class ReportAJAXForm(forms.ModelForm):
+    """
+    Form khusus untuk request AJAX (minimal validation)
+    """
+    class Meta:
+        model = Report
+        fields = ['content_type', 'content_id', 'category', 'description']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Remove labels and help texts for AJAX to reduce payload
+        for field in self.fields:
+            self.fields[field].label = ''
+            self.fields[field].help_text = ''
+
+
+class ReportStatusAJAXForm(forms.Form):
+    """
+    Form untuk update status via AJAX
+    """
+    status = forms.ChoiceField(
+        choices=Report.STATUS_CHOICES,
+        required=True
+    )
+    
+    def clean_status(self):
+        status = self.cleaned_data.get('status')
+        if status not in dict(Report.STATUS_CHOICES):
+            raise ValidationError('Status tidak valid')
+        return status
