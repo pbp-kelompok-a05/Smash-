@@ -28,6 +28,7 @@ urlpatterns = [
     path("posts/", include("post.urls")),
     path("comments/", include("comment.urls")),
     path("reports/", include("report.urls")),
+    path("ads/", include("ads.urls")),
     # optional: fallback redirect dari /accounts/login/ -> named 'login'
     path(
         "accounts/login/", RedirectView.as_view(pattern_name="login", permanent=False)
@@ -39,4 +40,4 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
