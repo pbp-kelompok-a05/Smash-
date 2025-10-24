@@ -126,6 +126,7 @@ class PostAPIView(View):
         """
         POST: Create new post
         AJAX Support: ✅
+        Mendukung FormData untuk file upload
         """
         try:
             if not request.user.is_authenticated:
@@ -134,7 +135,21 @@ class PostAPIView(View):
                     'message': 'Authentication required'
                 }, status=401)
             
-            data = json.loads(request.body)
+            # Handle FormData
+            if request.content_type == 'multipart/form-data':
+                # Parse JSON data from FormData
+                data_str = request.POST.get('data', '{}')
+                try:
+                    data = json.loads(data_str)
+                except json.JSONDecodeError:
+                    data = {}
+                
+                # Get file
+                image_file = request.FILES.get('image')
+            else:
+                # Handle regular JSON
+                data = json.loads(request.body)
+                image_file = None
             
             # Validasi required fields
             required_fields = ['title', 'content']
@@ -154,14 +169,40 @@ class PostAPIView(View):
             )
             
             # Handle image upload jika ada
-            if request.FILES.get('image'):
-                post.image = request.FILES['image']
+            if image_file:
+                # Validasi file type
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+                if image_file.content_type not in allowed_types:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'File type tidak didukung. Gunakan JPG, PNG, atau GIF.'
+                    }, status=400)
+                
+                # Validasi file size (max 5MB)
+                if image_file.size > 5 * 1024 * 1024:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Ukuran file terlalu besar. Maksimal 5MB.'
+                    }, status=400)
+                
+                post.image = image_file
                 post.save()
             
             return JsonResponse({
                 'status': 'success',
                 'message': 'Post berhasil dibuat',
-                'post_id': post.id
+                'post_id': post.id,
+                'post': {
+                    'id': post.id,
+                    'title': post.title,
+                    'content': post.content,
+                    'image': post.image.url if post.image else None,
+                    'video_link': post.video_link,
+                    'user': post.user.username,
+                    'created_at': post.created_at.isoformat(),
+                    'comment_count': 0,
+                    'can_edit': True
+                }
             }, status=201)
             
         except json.JSONDecodeError:

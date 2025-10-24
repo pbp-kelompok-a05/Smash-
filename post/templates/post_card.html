@@ -1,0 +1,194 @@
+<!-- post/templates/post/post_card.html -->
+<div class="post-card" data-post-id="{{ post.id }}">
+    <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
+        <header class="px-6 py-4 flex items-start gap-4">
+            <!-- User Avatar -->
+            <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" 
+                 alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+            <div class="flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-semibold text-lg text-gray-900">{{ post.title }}</h3>
+                    <span class="text-xs text-gray-500">• {{ post.user }}</span>
+                    <span class="text-xs text-gray-400">| {{ post.created_at|date:"M d, Y" }}</span>
+                    
+                    <!-- Edit/Delete buttons for post owner -->
+                    {% if post.can_edit %}
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button class="edit-post-btn text-xs text-blue-600 hover:text-blue-800" 
+                                data-post-id="{{ post.id }}">
+                            Edit
+                        </button>
+                        <button class="delete-post-btn text-xs text-red-600 hover:text-red-800" 
+                                data-post-id="{{ post.id }}">
+                            Delete
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Post Content -->
+                <div class="post-content mt-2">
+                    <p class="text-gray-700 leading-relaxed">
+                        {{ post.content|linebreaksbr }}
+                    </p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Post Image -->
+        {% if post.image %}
+        <div class="px-6 pb-4">
+            <img src="{{ post.image }}" 
+                 alt="Post image" 
+                 class="w-full rounded-lg object-cover max-h-96 cursor-pointer post-image"
+                 onclick="openImageModal('{{ post.image }}')" />
+        </div>
+        {% endif %}
+
+        <!-- Video Embed -->
+        {% if post.video_link %}
+        <div class="px-6 pb-4">
+            <div class="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                {% if "youtube.com" in post.video_link or "youtu.be" in post.video_link %}
+                    <iframe src="{{ post.video_link|replace:'watch?v=','embed/' }}" 
+                            class="w-full h-full"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                    </iframe>
+                {% else %}
+                    <video controls class="w-full h-full">
+                        <source src="{{ post.video_link }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Post Stats & Actions -->
+        <footer class="px-6 py-4 border-t border-gray-100">
+            <!-- Stats -->
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-6 text-gray-600 text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium post-likes-count">0</span>
+                        <span>likes</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium">{{ post.comment_count }}</span>
+                        <span>comments</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium post-shares-count">0</span>
+                        <span>shares</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between border-t border-gray-100 pt-3">
+                <div class="flex items-center gap-6">
+                    <!-- Like Button -->
+                    <button class="like-btn flex items-center gap-2 text-gray-600 hover:text-pink-600 transition-colors text-sm"
+                            data-post-id="{{ post.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             class="h-5 w-5 like-icon" 
+                             viewBox="0 0 24 24" 
+                             fill="none" 
+                             stroke="currentColor">
+                            <path stroke-linecap="round" 
+                                  stroke-linejoin="round" 
+                                  stroke-width="2" 
+                                  d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
+                        </svg>
+                        <span class="like-text">Like</span>
+                    </button>
+
+                    <!-- Comment Button -->
+                    <button class="comment-btn flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors text-sm"
+                            data-post-id="{{ post.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             class="h-5 w-5" 
+                             viewBox="0 0 24 24" 
+                             fill="none" 
+                             stroke="currentColor">
+                            <path stroke-linecap="round" 
+                                  stroke-linejoin="round" 
+                                  stroke-width="2" 
+                                  d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/>
+                        </svg>
+                        Comment
+                    </button>
+
+                    <!-- Save Button -->
+                    <button class="save-btn flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors text-sm"
+                            data-post-id="{{ post.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             class="h-5 w-5" 
+                             viewBox="0 0 24 24" 
+                             fill="none" 
+                             stroke="currentColor">
+                            <path stroke-linecap="round" 
+                                  stroke-linejoin="round" 
+                                  stroke-width="2" 
+                                  d="M5 3v16l7-5 7 5V3z"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+
+                <!-- Share Button -->
+                <button class="share-btn flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors text-sm"
+                        data-post-id="{{ post.id }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" 
+                         class="h-5 w-5" 
+                         viewBox="0 0 24 24" 
+                         fill="none" 
+                         stroke="currentColor">
+                        <path stroke-linecap="round" 
+                              stroke-linejoin="round" 
+                              stroke-width="2" 
+                              d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/>
+                        <path stroke-linecap="round" 
+                              stroke-linejoin="round" 
+                              stroke-width="2" 
+                              d="M16 6l-4-4-4 4"/>
+                    </svg>
+                    Share
+                </button>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="comments-section mt-4 hidden" id="comments-{{ post.id }}">
+                <div class="space-y-3">
+                    <!-- Comments will be loaded here -->
+                </div>
+                
+                <!-- Add Comment Form -->
+                <div class="mt-4 pt-3 border-t border-gray-100">
+                    <form class="add-comment-form" data-post-id="{{ post.id }}">
+                        <div class="flex gap-3">
+                            <input type="text" 
+                                   placeholder="Write a comment..." 
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   required>
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                Post
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </footer>
+    </article>
+</div>
+
+<!-- Image Modal -->
+<div id="image-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-90">
+    <div class="relative max-w-4xl max-h-full">
+        <button id="close-image-modal" class="absolute top-4 right-4 text-white text-2xl z-10">×</button>
+        <img id="modal-image" src="" alt="Enlarged post image" class="max-w-full max-h-full object-contain">
+    </div>
+</div>

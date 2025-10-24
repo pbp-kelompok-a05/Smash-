@@ -335,130 +335,343 @@
 
       // Load posts from API
       function loadPosts() {
-        fetch('/post/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-          }
-        })
-        .then(response => response.json())
-        .then(data => {
-          const container = document.getElementById('posts-container');
-          const loading = document.getElementById('loading-posts');
-          
-          if (loading) {
-            loading.remove();
-          }
+          fetch('/post/', {
+              method: 'GET',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrftoken
+              }
+          })
+          .then(response => response.json())
+          .then(data => {
+              const container = document.getElementById('posts-container');
+              const loading = document.getElementById('loading-posts');
+              
+              if (loading) {
+                  loading.remove();
+              }
 
-          if (data.status === 'success' && data.posts && data.posts.length > 0) {
-            container.innerHTML = data.posts.map(post => `
-              <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6" data-post-id="${post.id}">
-                <header class="px-6 py-4 flex items-start gap-4">
-                  <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" 
-                       alt="avatar" class="w-12 h-12 rounded-full object-cover" />
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2">
-                      <h3 class="font-semibold text-lg">${escapeHtml(post.title)}</h3>
-                      <span class="text-xs text-gray-400">• ${escapeHtml(post.user)}</span>
-                      <span class="text-xs text-gray-400">| ${formatDate(post.created_at)}</span>
-                    </div>
-                    <p class="text-gray-600 text-sm mt-2">
-                      ${escapeHtml(post.content_preview || post.content?.substring(0, 200) || '')}
-                      ${post.content && post.content.length > 200 ? '<a href="#" class="text-blue-600">...view more</a>' : ''}
-                    </p>
-                  </div>
-                </header>
+              if (data.status === 'success' && data.posts && data.posts.length > 0) {
+                  container.innerHTML = data.posts.map(post => createPostCard(post)).join('');
+                  initializePostInteractions();
+              } else {
+                  showNoPostsMessage(container);
+              }
+          })
+          .catch(error => {
+              console.error('Error loading posts:', error);
+              showErrorState(container);
+          });
+      }
 
-                ${post.image ? `
-                  <div class="px-6 pb-6">
-                    <img src="${post.image}" alt="post media" class="w-full rounded-lg object-cover max-h-[480px]" />
-                  </div>
-                ` : ''}
-
-                <footer class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-                  <div class="flex items-center gap-6 text-gray-600">
-                    <div class="flex items-center gap-2 text-sm">
-                      <span class="font-medium">0</span>
-                      <span class="text-xs">likes</span>
-                      <span class="mx-2">•</span>
-                      <span class="font-medium">${post.comment_count || 0}</span>
-                      <span class="text-xs">comments</span>
-                    </div>
-                  </div>
-
-                  <div class="flex items-center gap-6 text-gray-600">
-                    <button class="flex items-center gap-2 text-sm hover:text-black like-btn" aria-label="Like">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                      </svg>
-                      Like
-                    </button>
-                    <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Comment">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/>
-                      </svg>
-                      Comment
-                    </button>
-                    <button class="flex items-center gap-2 text-sm hover:text-black" aria-label="Save">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v16l7-5 7 5V3z"/>
-                      </svg>
-                      Save
-                    </button>
-                  </div>
-
-                  <div>
-                    <button class="flex items-center gap-2 text-gray-600 hover:text-black" aria-label="Share">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 6l-4-4-4 4"/>
-                      </svg>
-                      Share
-                    </button>
-                  </div>
-                </footer>
-              </article>
-            `).join('');
-            
-            // Add event listeners for like buttons
-            document.querySelectorAll('.like-btn').forEach(btn => {
-              btn.addEventListener('click', function() {
-                this.classList.toggle('text-pink-600');
-                const countNode = this.closest('article').querySelector('footer div:first-child .font-medium');
-                if (countNode) {
-                  const n = parseInt(countNode.textContent) || 0;
-                  countNode.textContent = this.classList.contains('text-pink-600') ? (n + 1) : Math.max(n - 1, 0);
-                }
-              });
-            });
-          } else {
-            // No posts available
-            container.innerHTML = `
-              <div class="text-center py-12">
-                <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" 
-                     alt="No posts" class="mx-auto w-64 h-64 object-cover rounded-lg">
-                <p class="mt-4 text-gray-500 text-lg">No posts yet</p>
-                <p class="text-gray-400 text-sm">Be the first to create a post!</p>
+      // Function to create post card HTML
+      function createPostCard(post) {
+          const editButtons = post.can_edit ? `
+              <div class="flex items-center gap-2 ml-auto">
+                  <button class="edit-post-btn text-xs text-blue-600 hover:text-blue-800" 
+                          data-post-id="${post.id}">
+                      Edit
+                  </button>
+                  <button class="delete-post-btn text-xs text-red-600 hover:text-red-800" 
+                          data-post-id="${post.id}">
+                      Delete
+                  </button>
               </div>
-            `;
+          ` : '';
+
+          const imageSection = post.image ? `
+              <div class="px-6 pb-4">
+                  <img src="${post.image}" 
+                       alt="Post image" 
+                       class="w-full rounded-lg object-cover max-h-96 cursor-pointer post-image"
+                       onclick="openImageModal('${post.image}')" />
+              </div>
+          ` : '';
+
+          let videoSection = '';
+          if (post.video_link) {
+              if (post.video_link.includes('youtube.com') || post.video_link.includes('youtu.be')) {
+                  const embedUrl = post.video_link.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+                  videoSection = `
+                      <div class="px-6 pb-4">
+                          <div class="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                              <iframe src="${embedUrl}" 
+                                      class="w-full h-full"
+                                      frameborder="0" 
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                      allowfullscreen>
+                              </iframe>
+                          </div>
+                      </div>
+                  `;
+              } else {
+                  videoSection = `
+                      <div class="px-6 pb-4">
+                          <div class="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                              <video controls class="w-full h-full">
+                                  <source src="${post.video_link}" type="video/mp4">
+                                  Your browser does not support the video tag.
+                              </video>
+                          </div>
+                      </div>
+                  `;
+              }
           }
-        })
-        .catch(error => {
-          console.error('Error loading posts:', error);
-          const container = document.getElementById('posts-container');
+
+          return `
+              <div class="post-card" data-post-id="${post.id}">
+                  <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
+                      <header class="px-6 py-4 flex items-start gap-4">
+                          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e1f8e3e6b9f7a1d9b6dd7e6a4c4c0a9" 
+                               alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+                          <div class="flex-1">
+                              <div class="flex items-center gap-2 flex-wrap">
+                                  <h3 class="font-semibold text-lg text-gray-900">${escapeHtml(post.title)}</h3>
+                                  <span class="text-xs text-gray-500">• ${escapeHtml(post.user)}</span>
+                                  <span class="text-xs text-gray-400">| ${formatDate(post.created_at)}</span>
+                                  ${editButtons}
+                              </div>
+                              
+                              <div class="post-content mt-2">
+                                  <p class="text-gray-700 leading-relaxed">
+                                      ${escapeHtml(post.content).replace(/\n/g, '<br>')}
+                                  </p>
+                              </div>
+                          </div>
+                      </header>
+
+                      ${imageSection}
+                      ${videoSection}
+
+                      <footer class="px-6 py-4 border-t border-gray-100">
+                          <div class="flex items-center justify-between mb-3">
+                              <div class="flex items-center gap-6 text-gray-600 text-sm">
+                                  <div class="flex items-center gap-2">
+                                      <span class="font-medium post-likes-count">0</span>
+                                      <span>likes</span>
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                      <span class="font-medium">${post.comment_count || 0}</span>
+                                      <span>comments</span>
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                      <span class="font-medium post-shares-count">0</span>
+                                      <span>shares</span>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div class="flex items-center justify-between border-t border-gray-100 pt-3">
+                              <div class="flex items-center gap-6">
+                                  <button class="like-btn flex items-center gap-2 text-gray-600 hover:text-pink-600 transition-colors text-sm"
+                                          data-post-id="${post.id}">
+                                      <svg xmlns="http://www.w3.org/2000/svg" 
+                                           class="h-5 w-5 like-icon" 
+                                           viewBox="0 0 24 24" 
+                                           fill="none" 
+                                           stroke="currentColor">
+                                          <path stroke-linecap="round" 
+                                                stroke-linejoin="round" 
+                                                stroke-width="2" 
+                                                d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
+                                      </svg>
+                                      <span class="like-text">Like</span>
+                                  </button>
+
+                                  <button class="comment-btn flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors text-sm"
+                                          data-post-id="${post.id}">
+                                      <svg xmlns="http://www.w3.org/2000/svg" 
+                                           class="h-5 w-5" 
+                                           viewBox="0 0 24 24" 
+                                           fill="none" 
+                                           stroke="currentColor">
+                                          <path stroke-linecap="round" 
+                                                stroke-linejoin="round" 
+                                                stroke-width="2" 
+                                                d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/>
+                                      </svg>
+                                      Comment
+                                  </button>
+
+                                  <button class="save-btn flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors text-sm"
+                                          data-post-id="${post.id}">
+                                      <svg xmlns="http://www.w3.org/2000/svg" 
+                                           class="h-5 w-5" 
+                                           viewBox="0 0 24 24" 
+                                           fill="none" 
+                                           stroke="currentColor">
+                                          <path stroke-linecap="round" 
+                                                stroke-linejoin="round" 
+                                                stroke-width="2" 
+                                                d="M5 3v16l7-5 7 5V3z"/>
+                                      </svg>
+                                      Save
+                                  </button>
+                              </div>
+
+                              <button class="share-btn flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors text-sm"
+                                      data-post-id="${post.id}">
+                                  <svg xmlns="http://www.w3.org/2000/svg" 
+                                       class="h-5 w-5" 
+                                       viewBox="0 0 24 24" 
+                                       fill="none" 
+                                       stroke="currentColor">
+                                      <path stroke-linecap="round" 
+                                            stroke-linejoin="round" 
+                                            stroke-width="2" 
+                                            d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/>
+                                      <path stroke-linecap="round" 
+                                            stroke-linejoin="round" 
+                                            stroke-width="2" 
+                                            d="M16 6l-4-4-4 4"/>
+                                  </svg>
+                                  Share
+                              </button>
+                          </div>
+
+                          <div class="comments-section mt-4 hidden" id="comments-${post.id}">
+                              <div class="space-y-3">
+                                  <!-- Comments will be loaded here -->
+                              </div>
+                              
+                              <div class="mt-4 pt-3 border-t border-gray-100">
+                                  <form class="add-comment-form" data-post-id="${post.id}">
+                                      <div class="flex gap-3">
+                                          <input type="text" 
+                                                 placeholder="Write a comment..." 
+                                                 class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                 required>
+                                          <button type="submit" 
+                                                  class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                              Post
+                                          </button>
+                                      </div>
+                                  </form>
+                              </div>
+                          </div>
+                      </footer>
+                  </article>
+              </div>
+          `;
+      }
+
+      function initializePostInteractions() {
+          // Like functionality
+          document.querySelectorAll('.like-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  const postId = this.dataset.postId;
+                  const likeIcon = this.querySelector('.like-icon');
+                  const likeText = this.querySelector('.like-text');
+                  const likesCount = this.closest('footer').querySelector('.post-likes-count');
+                  
+                  this.classList.toggle('text-pink-600');
+                  likeIcon.classList.toggle('fill-pink-600');
+                  
+                  if (this.classList.contains('text-pink-600')) {
+                      likeText.textContent = 'Liked';
+                      likesCount.textContent = (parseInt(likesCount.textContent) || 0) + 1;
+                  } else {
+                      likeText.textContent = 'Like';
+                      likesCount.textContent = Math.max((parseInt(likesCount.textContent) || 1) - 1, 0);
+                  }
+              });
+          });
+
+          // Comment toggle
+          document.querySelectorAll('.comment-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  const postId = this.dataset.postId;
+                  const commentsSection = document.getElementById(`comments-${postId}`);
+                  commentsSection.classList.toggle('hidden');
+              });
+          });
+
+          // Save functionality
+          document.querySelectorAll('.save-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  this.classList.toggle('text-green-600');
+                  const svg = this.querySelector('svg');
+                  if (this.classList.contains('text-green-600')) {
+                      svg.classList.add('fill-green-600');
+                  } else {
+                      svg.classList.remove('fill-green-600');
+                  }
+              });
+          });
+
+          // Share functionality
+          document.querySelectorAll('.share-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  const postId = this.dataset.postId;
+                  const sharesCount = this.closest('footer').querySelector('.post-shares-count');
+                  sharesCount.textContent = (parseInt(sharesCount.textContent) || 0) + 1;
+                  
+                  // Simple share implementation
+                  if (navigator.share) {
+                      navigator.share({
+                          title: 'Check out this post on Smash!',
+                          url: window.location.href + `?post=${postId}`
+                      });
+                  } else {
+                      alert('Post shared! (Copy link to share manually)');
+                  }
+              });
+          });
+
+          // Image modal functionality
+          initializeImageModal();
+      }
+
+      function initializeImageModal() {
+          const modal = document.getElementById('image-modal');
+          const modalImage = document.getElementById('modal-image');
+          const closeBtn = document.getElementById('close-image-modal');
+
+          window.openImageModal = function(imageSrc) {
+              modalImage.src = imageSrc;
+              modal.classList.remove('hidden');
+              document.body.style.overflow = 'hidden';
+          };
+
+          closeBtn.addEventListener('click', function() {
+              modal.classList.add('hidden');
+              document.body.style.overflow = 'auto';
+          });
+
+          modal.addEventListener('click', function(e) {
+              if (e.target === modal) {
+                  modal.classList.add('hidden');
+                  document.body.style.overflow = 'auto';
+              }
+          });
+      }
+
+      function showNoPostsMessage(container) {
+          container.innerHTML = `
+              <div class="text-center py-12">
+                  <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" 
+                      alt="No posts" class="mx-auto w-64 h-64 object-cover rounded-lg">
+                  <p class="mt-4 text-gray-500 text-lg">No posts yet</p>
+                  <p class="text-gray-400 text-sm">Be the first to create a post!</p>
+              </div>
+          `;
+      }
+
+      function showErrorState(container) {
           const loading = document.getElementById('loading-posts');
           if (loading) loading.remove();
           
           container.innerHTML = `
-            <div class="text-center py-12">
-              <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" 
-                   alt="Error" class="mx-auto w-64 h-64 object-cover rounded-lg">
-              <p class="mt-4 text-gray-500 text-lg">Error loading posts</p>
-              <p class="text-gray-400 text-sm">Please try again later</p>
-            </div>
+              <div class="text-center py-12">
+                  <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" 
+                      alt="Error" class="mx-auto w-64 h-64 object-cover rounded-lg">
+                  <p class="mt-4 text-gray-500 text-lg">Error loading posts</p>
+                  <p class="text-gray-400 text-sm">Please try again later</p>
+                  <button onclick="loadPosts()" class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                      Retry
+                  </button>
+              </div>
           `;
-        });
       }
 
       // Logout function
@@ -488,6 +701,7 @@
 
       // Utility functions
       function escapeHtml(unsafe) {
+        if (!unsafe) return '';
         return unsafe
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
