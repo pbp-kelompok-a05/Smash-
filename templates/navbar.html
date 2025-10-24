@@ -1,138 +1,255 @@
 {% load static %}
-<nav class="bg-white shadow-sm w-screen fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-2">
-  <!-- Left: Menu icon -->
-  <button id="menu-btn"
-          class="p-2 hover:bg-gray-100 rounded-full"
-          onclick="toggleSidebar()"
-          type="button">
-    <svg xmlns="http://www.w3.org/2000/svg"
-         class="h-6 w-6"
-         fill="none"
-         viewBox="0 0 24 24"
-         stroke="currentColor"
-         stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  </button>
-  <!-- Middle: Logo + Search -->
-  <div class="flex items-center gap-4 flex-1 mx-4">
-    <a href="/" class="flex items-center gap-2">
-      <img src="{% static 'images/logo-smash.png' %}"
-           alt="Smash Logo"
-           class="h-8 w-auto" />
-      <span class="font-bold text-xl text-purple-700">Smash!</span>
+<nav class="navbar">
+  <div class="navbar-left">
+    <!-- Tombol sidebar -->
+    <button class="menu-btn" id="sidebarToggle">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Logo -->
+    <a href="/" class="navbar-logo">
+      <img src="{% static 'static/images/logo-smash.png' %}" alt="Logo">
+      <span class="logo-text">Smash!</span>
     </a>
-    <div class="flex-1 hidden sm:block">
-      <input type="text"
-             placeholder="Search..."
-             class="w-full rounded-lg border px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
-    </div>
   </div>
-  <!-- Right Section -->
-  <div class="flex items-center gap-3 inset-y-0 right-0">
+
+  <!-- Kolom pencarian -->
+  <div class="navbar-search">
+    <i class="fas fa-search"></i>
+    <input type="text" placeholder="Search...">
+  </div>
+
+  <!-- Bagian kanan -->
+  <div class="navbar-right">
     {% if user.is_authenticated %}
-      <!-- Tombol Create Post menggunakan -->
-      <a href="{% url 'create_forum_post' %}"
-         class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 inline-flex items-center">
-        Create a Post
+      <!-- Tombol create post -->
+      <a href="{% url 'create_post' %}" class="create-post-btn desktop-only">
+        <i class="fas fa-plus"></i> Create a post
       </a>
-      <!-- Dropdown user -->
-      <div class="relative">
-        <button id="user-btn"
-                class="flex items-center gap-2 border rounded-full px-3 py-1 hover:bg-gray-100"
-                onclick="toggleDropdown()"
-                type="button">
-          <!-- Avatar user (fallback ke default jika tidak ada) -->
-          <img src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}"
-               alt="User Avatar"
-               class="h-6 w-6 rounded-full object-cover" />
-          <span class="text-sm font-medium">{{ user.username }}</span>
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-4 w-4"
-               fill="none"
-               viewBox="0 0 24 24"
-               stroke="currentColor"
-               stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        <!-- Dropdown menu -->
-        <div id="dropdown"
-             class="hidden absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg">
-          <a href="{% url 'my_posts' %}"
-             class="block px-3 py-2 text-sm hover:bg-gray-100">📝 My Posts</a>
-          <button id="logout-btn"
-                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                  type="button">🚪 Logout</button>
-        </div>
+      <a href="{% url 'create_post' %}" class="create-post-btn mobile-only" title="Create Post">
+        <i class="fas fa-plus"></i>
+      </a>
+
+      <!-- Menu user -->
+      <div class="user-menu">
+        <img 
+          src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+          alt="User Avatar" 
+          class="user-avatar"
+        >
+        <span class="username">{{ user.username }}</span>
+        <i class="fas fa-chevron-down dropdown-toggle"></i>
+        <ul class="dropdown-menu">
+          <li>
+            <form id="logout-form" method="POST" action="{% url 'logout_ajax' %}">
+              {% csrf_token %}
+              <button type="submit" class="logout-btn">Logout</button>
+            </form>
+          </li>
+        </ul>
       </div>
     {% else %}
-      <a href="{% url 'account:login_register' %}"
-         class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 inline-flex items-center">
-        Register
+      <!-- Bila belum login -->
+      <a href="{% url 'login_register' %}" class="auth-btn register-btn">
+        <i class="fas fa-user-plus"></i> Register
       </a>
-      <a href="{% url 'account:login_register' %}"
-         class="px-3 py-1 text-sm border rounded hover:bg-gray-100 inline-flex items-center">Login</a>
+      <a href="{% url 'login_register' %}" class="auth-btn login-btn">Login</a>
     {% endif %}
   </div>
 </nav>
+
+<style>
+/* ===== Struktur utama ===== */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #444;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #4b006e;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.navbar-logo img {
+  height: 36px;
+  margin-right: 6px;
+}
+
+/* ===== Kolom pencarian ===== */
+.navbar-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f3f3f3;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 0 20px;
+}
+
+.navbar-search i {
+  color: #888;
+  margin-right: 6px;
+}
+
+.navbar-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+}
+
+/* ===== Bagian kanan ===== */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.create-post-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #007bff;
+  color: white;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.create-post-btn i {
+  margin-right: 6px;
+}
+
+.create-post-btn.mobile-only {
+  display: none;
+}
+
+/* Menu user */
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.username {
+  font-weight: 500;
+}
+
+.dropdown-toggle {
+  font-size: 12px;
+  color: #555;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: none;
+  list-style: none;
+  padding: 8px 0;
+}
+
+.user-menu:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+}
+
+/* ===== Responsif ===== */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 8px 12px;
+  }
+
+  .navbar-search {
+    margin: 0 10px;
+  }
+
+  .create-post-btn.desktop-only {
+    display: none;
+  }
+
+  .create-post-btn.mobile-only {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px; /* sedikit melengkung */
+    font-size: 18px;
+  }
+
+  .username {
+    display: none;
+  }
+}
+</style>
+
 <script>
-  function toggleDropdown() {
-    document.getElementById("dropdown")?.classList.toggle("hidden");
-  }
-
-  function toggleSidebar() {
-    console.log("Sidebar toggle triggered");
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    const logoutBtn = document.getElementById("logout-btn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", async function () {
-        console.log("Logout button clicked");
-        const csrftoken = getCookie("csrftoken");
-        console.log("CSRF Token:", csrftoken);
-        
-        try {
-          const res = await fetch("{% url 'account:logout_ajax' %}", {
-            method: "POST",
-            headers: { 
-              "X-CSRFToken": csrftoken,
-              "X-Requested-With": "XMLHttpRequest"
-            },
-          });
-          
-          console.log("Response status:", res.status);
-          const data = await res.json();
-          console.log("Response data:", data);
-          
-          if (data.success) {
-            console.log("Logout successful, redirecting to:", data.redirect_url);
-            window.location.href = data.redirect_url || "{% url 'account:login_register' %}";
-          } else {
-            console.error("Logout failed:", data);
-            alert("Logout failed: " + (data.error || "Unknown error"));
-          }
-        } catch (err) {
-          console.error("Logout error:", err);
-          alert("Logout error: " + err.message);
-        }
+document.addEventListener("DOMContentLoaded", function() {
+  const logoutForm = document.querySelector("#logout-form");
+  if (logoutForm) {
+    logoutForm.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const res = await fetch("{% url 'logout_ajax' %}", {
+        method: "POST",
+        headers: {"X-CSRFToken": "{{ csrf_token }}"},
       });
-    }
-  });
-
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== "") {
-      const cookies = document.cookie.split(";");
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === name + "=") {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
+      const data = await res.json();
+      if (data.success) location.reload();
+    });
   }
+});
 </script>
