@@ -1,12 +1,12 @@
 from django.utils import timezone
 from django.db import models
-from .models import Advertisement
+from .models import Ad
 import random
 
 def ads_context(request):
     now = timezone.now()
 
-    ads = Advertisement.objects.filter(active=True).filter(
+    ads = Ad.objects.filter(active=True).filter(
         models.Q(start_at__lte=now) | models.Q(start_at__isnull=True),
         models.Q(end_at__gte=now) | models.Q(end_at__isnull=True),
     )

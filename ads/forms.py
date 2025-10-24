@@ -1,8 +1,8 @@
 # ads/forms.py
 from django import forms
-from .models import Advertisement
+from .models import Ad
 
 class AdForm(forms.ModelForm):
     class Meta:
-        model = Advertisement
-        fields = ['title', 'ad_type', 'image', 'link', 'is_active', 'start_at', 'end_at', 'delay']
+        model = Ad
+        fields = ['title', 'ad_type', 'image', 'link', 'active', 'start_at', 'end_at', 'popup_delay_seconds']

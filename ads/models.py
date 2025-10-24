@@ -1,25 +1,21 @@
-from time import timezone
+# ads/models.py
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
 
-# Create your models here.
-class Advertisement(models.Model):
-    title = models.CharField(max_length=100)
+class Ad(models.Model):
     TYPE_CHOICES = (
         ('popup', 'Popup'),
         ('inline', 'Inline'),
     )
-    # Model untuk gambar iklan
+    title = models.CharField(max_length=120, blank=True)
+    ad_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='inline')
     image = models.ImageField(upload_to='ads/')
-    # Model untuk tipe iklan: pop-up atau inline
-    ad_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
-    # Model untuk link iklan ketika diklik
     link = models.URLField(blank=True, null=True)
-    # Model untuk delay sebelum pop-up muncul (dalam detik)
-    delay = models.IntegerField(default=3)
-    # Model untuk status aktif/non-aktif iklan
-    is_active = models.BooleanField(default=True)
+    active = models.BooleanField(default=True)
     start_at = models.DateTimeField(blank=True, null=True)
     end_at = models.DateTimeField(blank=True, null=True)
+    popup_delay_seconds = models.PositiveIntegerField(default=3)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_active_now(self):
@@ -31,6 +27,6 @@ class Advertisement(models.Model):
         if self.end_at and now > self.end_at:
             return False
         return True
-    
+
     def __str__(self):
         return f"{self.title or self.id} ({self.ad_type})"
