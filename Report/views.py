@@ -14,79 +14,102 @@ from django.utils import timezone
 from .models import Report, ReportSettings
 from .forms import ReportForm, ReportAdminForm, ReportSettingsForm
 
+# Handle referential integrity
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 
 class ReportCreateView(LoginRequiredMixin, View):
     """
     AJAX View untuk membuat laporan baru.
     """
     def post(self, request):
-        # Get data from AJAX request
-        content_type_id = request.POST.get('content_type_id')
-        object_id = request.POST.get('object_id')
-        category = request.POST.get('category')
-        description = request.POST.get('description', '')
-
-        # Validate required fields
-        if not all([content_type_id, object_id, category]):
-            return JsonResponse({
-                'success': False,
-                'message': 'Data yang diperlukan tidak lengkap'
-            }, status=400)
-
         try:
-            content_type = ContentType.objects.get(id=content_type_id)
-            reported_object = content_type.get_object_for_this_type(id=object_id)
-        except (ContentType.DoesNotExist, Exception):
+            # Get data from AJAX request
+            content_type_id = request.POST.get('content_type_id')
+            object_id = request.POST.get('object_id')
+            category = request.POST.get('category')
+            description = request.POST.get('description', '')
+
+            # Validate required fields
+            if not all([content_type_id, object_id, category]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Data yang diperlukan tidak lengkap'
+                }, status=400)
+
+            # Validate category
+            valid_categories = [choice[0] for choice in Report.CATEGORY_CHOICES]
+            if category not in valid_categories:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Kategori pelaporan tidak valid'
+                }, status=400)
+
+            try:
+                content_type = ContentType.objects.get(id=content_type_id)
+                reported_object = content_type.get_object_for_this_type(id=object_id)
+            except (ContentType.DoesNotExist, Exception) as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Konten yang dilaporkan tidak ditemukan'
+                }, status=404)
+
+            # Check if user already reported this object
+            existing_report = Report.objects.filter(
+                reporter=request.user,
+                content_type=content_type,
+                object_id=object_id
+            ).first()
+
+            if existing_report:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Anda sudah melaporkan konten ini sebelumnya'
+                }, status=400)
+
+            # Create report
+            report = Report.objects.create(
+                reporter=request.user,
+                content_type=content_type,
+                object_id=object_id,
+                category=category,
+                description=description
+            )
+
+            # Check if auto-hide threshold is reached
+            settings = ReportSettings.get_settings()
+            report_count = Report.objects.filter(
+                content_type=content_type,
+                object_id=object_id,
+                status__in=[Report.STATUS_PENDING, Report.STATUS_UNDER_REVIEW]
+            ).count()
+
+            auto_hide = False
+            if report_count >= settings.auto_action_threshold and settings.auto_hide_on_threshold:
+                # Auto hide the content (example implementation)
+                if hasattr(reported_object, 'is_hidden'):
+                    reported_object.is_hidden = True
+                    reported_object.save()
+                    auto_hide = True
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Laporan berhasil dikirim. Tim moderasi akan meninjaunya.',
+                'report_id': str(report.id),
+                'auto_hide': auto_hide,
+                'current_reports': report_count
+            })
+
+        except IntegrityError:
             return JsonResponse({
                 'success': False,
-                'message': 'Konten yang dilaporkan tidak ditemukan'
-            }, status=404)
-
-        # Check if user already reported this object
-        existing_report = Report.objects.filter(
-            reporter=request.user,
-            content_type=content_type,
-            object_id=object_id
-        ).first()
-
-        if existing_report:
+                'message': 'Terjadi kesalahan sistem. Silakan coba lagi.'
+            }, status=500)
+        except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': 'Anda sudah melaporkan konten ini sebelumnya'
-            }, status=400)
-
-        # Create report
-        report = Report.objects.create(
-            reporter=request.user,
-            content_type=content_type,
-            object_id=object_id,
-            category=category,
-            description=description
-        )
-
-        # Check if auto-hide threshold is reached
-        settings = ReportSettings.objects.get(pk=1)
-        report_count = Report.objects.filter(
-            content_type=content_type,
-            object_id=object_id,
-            status__in=[Report.STATUS_PENDING, Report.STATUS_UNDER_REVIEW]
-        ).count()
-
-        auto_hide = False
-        if report_count >= settings.auto_action_threshold and settings.auto_hide_on_threshold:
-            # Auto hide the content (example implementation)
-            if hasattr(reported_object, 'is_hidden'):
-                reported_object.is_hidden = True
-                reported_object.save()
-                auto_hide = True
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Laporan berhasil dikirim. Tim moderasi akan meninjaunya.',
-            'report_id': str(report.id),
-            'auto_hide': auto_hide,
-            'current_reports': report_count
-        })
+                'message': f'Terjadi kesalahan: {str(e)}'
+            }, status=500)
 
 
 class ReportListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
