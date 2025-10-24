@@ -4,12 +4,12 @@ import uuid
 import time
 
 from .models import Comment
-from Post.models import ForumPost
+from post.models import ForumPost
 from django.test import RequestFactory
 from django.http import HttpResponse
 from unittest.mock import patch
-from Comment.views import show_comments, add_comment
-from Comment.forms import CommentForm
+from comment.views import show_comments, add_comment
+from comment.forms import CommentForm
 
 
 class CommentModelTests(TestCase):

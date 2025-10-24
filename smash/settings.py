@@ -36,13 +36,11 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "nathanael-leander-smash.pbp.cs.ui.ac.id"]
 
 # Tambahan entri url proyek pws
-CSRF_TRUSTED_ORIGINS = [
-    "https://nathanael-leander-smash.pbp.cs.ui.ac.id"
-]
+CSRF_TRUSTED_ORIGINS = ["https://nathanael-leander-smash.pbp.cs.ui.ac.id"]
 
-LOGIN_URL = "/login/"            # redirect default untuk login_required
-LOGIN_REDIRECT_URL = "/"         # setelah login sukses
-LOGOUT_REDIRECT_URL = "/"        # setelah logout
+LOGIN_URL = "/login/"  # redirect default untuk login_required
+LOGIN_REDIRECT_URL = "/"  # setelah login sukses
+LOGOUT_REDIRECT_URL = "/"  # setelah logout
 
 # Application definition
 
@@ -58,7 +56,6 @@ INSTALLED_APPS = [
     "report",
     "comment",
     "ads",
-    "homepage",
     "account",
     "cardview",
 ]
@@ -81,10 +78,11 @@ TEMPLATES = [
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
-            "context_processors": [                
-                "django.template.context_processors.request",            
+            "context_processors": [
+                "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",                
+                "django.contrib.messages.context_processors.messages",
+                'ads.context_processors.ads_context',
             ],
         },
     },
@@ -157,10 +155,16 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_URL = '/ads/admin-login/'
+LOGIN_REDIRECT_URL = '/ads/manage/'
