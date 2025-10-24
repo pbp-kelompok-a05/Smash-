@@ -23,12 +23,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("account/", include("account.urls")),     # ← PASTIKAN PATH SPESIFIK
-    path("", include("main.urls")),                # ← BIARKAN MAIN MENANGANI ROOT
-    path("post/", include("post.urls")),           # ← GUNAKAN PATH SPESIFIK
+    path("account/", include("account.urls")),  # ← PASTIKAN PATH SPESIFIK
+    path("", include("main.urls")),  # ← BIARKAN MAIN MENANGANI ROOT
+    path("post/", include("post.urls")),  # ← GUNAKAN PATH SPESIFIK
     path("comments/", include("comment.urls")),
-    path("reports/", include("report.urls"))
+    path("reports/", include("report.urls")),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_URL)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
