@@ -1,151 +1,192 @@
-import uuid
+# post/models.py
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
+from django.urls import reverse
 
-
-class ForumPost(models.Model):
+class Post(models.Model):
     """
-    Model untuk merepresentasikan postingan/diskusi dalam forum Padel.
-    Mendukung konten teks, gambar, dan embed video.
+    MODEL: Post
+    MODUL: Post 📩
+    DEVELOPER: Christna
+    
+    DESKRIPSI: 
+    Model untuk merepresentasikan postingan/forum diskusi tentang olahraga padel.
+    Mendukung input teks, gambar, dan tautan video yang ditampilkan dalam bentuk card.
+    
+    FUNGSI UTAMA:
+    - Menyimpan data postingan pengguna
+    - Mengelola media (gambar/video)
+    - Menangani interaksi like/dislike
+    - Mendukung CRUD operations
+    
+    CRUD OPERATIONS:
+    - Create: Pengguna menulis post baru
+    - Read: Menampilkan post di homepage
+    - Update: Pengguna mengedit post mereka
+    - Delete: Pengguna/admin menghapus post
+    
+    RELASI EKSTERNAL:
+    - User (pembuat post)
+    - Comment (komentar pada post) [di app comment]
+    - Report (laporan pada post) [di app report]
     """
     
-    # Primary Key menggunakan UUID untuk keamanan dan skalabilitas
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        verbose_name="Post ID"
-    )
-    
-    # Relasi ke model User sebagai author
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='forum_posts',
-        verbose_name="Penulis"
+    # Fields
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='posts',
+        verbose_name="Pembuat Post"
     )
     
     title = models.CharField(
-        max_length=255,
+        max_length=200,
         verbose_name="Judul Post",
-        help_text="Judul untuk postingan diskusi"
+        help_text="Judul postingan (maksimal 200 karakter)"
     )
     
     content = models.TextField(
         verbose_name="Konten Post",
-        help_text="Isi konten postingan"
+        help_text="Konten utama postingan"
     )
     
-    # Field opsional untuk gambar dan video
     image = models.ImageField(
-        upload_to='post_images/',
-        blank=True,
+        upload_to='post_images/%Y/%m/%d/',
         null=True,
-        verbose_name="Gambar Post",
-        help_text="Opsional: Unggah gambar pendukung"
+        blank=True,
+        verbose_name="Gambar",
+        help_text="Upload gambar (opsional)"
     )
     
-    video_link = models.URLField(
-        blank=True,
+    video_url = models.URLField(
+        max_length=500,
         null=True,
-        validators=[URLValidator()],
+        blank=True,
         verbose_name="Tautan Video",
-        help_text="Opsional: Tautan video embed (YouTube/Vimeo)"
+        help_text="Tautan video YouTube/Vimeo (opsional)"
     )
     
-    # Timestamps untuk pelacakan
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name="Dibuat pada"
+        verbose_name="Dibuat Pada"
     )
     
     updated_at = models.DateTimeField(
         auto_now=True,
-        verbose_name="Diperbarui pada"
+        verbose_name="Diupdate Pada"
     )
     
-    # Metric interaksi
-    likes_count = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Jumlah Like"
+    likes = models.ManyToManyField(
+        User,
+        related_name='post_likes',
+        blank=True,
+        verbose_name="Like"
     )
     
-    dislikes_count = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Jumlah Dislike"
+    dislikes = models.ManyToManyField(
+        User,
+        related_name='post_dislikes',
+        blank=True,
+        verbose_name="Dislike"
     )
     
-    shares_count = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Jumlah Share"
-    )
-    
-    # Status moderasi
-    is_deleted = models.BooleanField(
-        default=False,
-        verbose_name="Dihapus?",
-        help_text="Penanda soft delete untuk post"
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Aktif",
+        help_text="Post aktif/tidak (untuk soft delete)"
     )
 
     class Meta:
-        """Konfigurasi tambahan untuk model"""
+        """Konfigurasi metadata untuk model Post"""
+        db_table = 'post_posts'
         ordering = ['-created_at']
-        verbose_name = "Forum Post"
-        verbose_name_plural = "Forum Posts"
+        verbose_name = "Post"
+        verbose_name_plural = "Posts"
         indexes = [
             models.Index(fields=['created_at']),
-            models.Index(fields=['author', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['is_active']),
         ]
 
+    def clean(self):
+        """
+        VALIDASI CUSTOM:
+        - Hanya boleh mengisi image ATAU video_url, tidak boleh keduanya
+        - Memastikan konsistensi data sebelum disimpan
+        """
+        super().clean()
+        if self.image and self.video_url:
+            raise ValidationError({
+                'image': 'Hanya boleh mengisi salah satu: gambar atau tautan video.',
+                'video_url': 'Hanya boleh mengisi salah satu: gambar atau tautan video.'
+            })
+
+    def save(self, *args, **kwargs):
+        """Override save method untuk menjalankan validasi custom"""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        """Representasi string untuk objek Post"""
-        return f"{self.title} by {self.author.username}"
+        """Representasi string untuk Post"""
+        return f"Post: {self.title} by {self.user.username}"
+
+    def get_absolute_url(self):
+        """URL untuk mengakses detail post"""
+        return reverse('post:post-detail', kwargs={'pk': self.pk})
+
+    # Properties untuk analytics
+    @property
+    def total_likes(self):
+        """Menghitung total like pada post"""
+        return self.likes.count()
+
+    @property
+    def total_dislikes(self):
+        """Menghitung total dislike pada post"""
+        return self.dislikes.count()
+
+    @property
+    def total_comments(self):
+        """Menghitung total komentar pada post"""
+        # Ini akan bekerja jika ada relasi dari Comment model
+        return self.comments.count() if hasattr(self, 'comments') else 0
+
+    @property
+    def has_media(self):
+        """Cek apakah post memiliki media (gambar atau video)"""
+        return bool(self.image or self.video_url)
+
+    @property
+    def media_type(self):
+        """Mendapatkan jenis media post"""
+        if self.image:
+            return 'image'
+        elif self.video_url:
+            return 'video'
+        return 'text'
+
+    # Method untuk business logic
+    def user_has_liked(self, user):
+        """Cek apakah user tertentu sudah like post ini"""
+        return self.likes.filter(id=user.id).exists() if user.is_authenticated else False
+
+    def user_has_disliked(self, user):
+        """Cek apakah user tertentu sudah dislike post ini"""
+        return self.dislikes.filter(id=user.id).exists() if user.is_authenticated else False
 
     def soft_delete(self):
-        """Soft delete post dengan menandai is_deleted=True"""
-        self.is_deleted = True
+        """Soft delete post (menonaktifkan tanpa menghapus dari database)"""
+        self.is_active = False
         self.save()
 
     def restore(self):
-        """Mengembalikan post yang terhapus"""
-        self.is_deleted = False
+        """Mengaktifkan kembali post yang di-soft delete"""
+        self.is_active = True
         self.save()
 
-    # Methods untuk manajemen interaksi
-    def increment_likes(self):
-        """Menambah jumlah like"""
-        self.likes_count += 1
-        self.save()
-
-    def decrement_likes(self):
-        """Mengurangi jumlah like (jika > 0)"""
-        if self.likes_count > 0:
-            self.likes_count -= 1
-            self.save()
-
-    def increment_dislikes(self):
-        """Menambah jumlah dislike"""
-        self.dislikes_count += 1
-        self.save()
-
-    def decrement_dislikes(self):
-        """Mengurangi jumlah dislike (jika > 0)"""
-        if self.dislikes_count > 0:
-            self.dislikes_count -= 1
-            self.save()
-
-    def increment_shares(self):
-        """Menambah jumlah share"""
-        self.shares_count += 1
-        self.save()
-
-    @property
-    def total_interactions(self):
-        """Total semua interaksi (like + dislike + share)"""
-        return self.likes_count + self.dislikes_count + self.shares_count
-
-    @property
-    def is_edited(self):
-        """Cek apakah post pernah diedit"""
-        return self.updated_at > self.created_at.replace(microsecond=0)
+    def get_preview_content(self, length=150):
+        """Mendapatkan preview konten untuk card display"""
+        if len(self.content) <= length:
+            return self.content
+        return self.content[:length] + '...'
