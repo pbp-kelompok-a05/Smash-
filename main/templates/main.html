@@ -1,23 +1,22 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block meta %}
-<title>Smash!</title>
+  <title>Smash!</title>
 {% endblock meta %}
-
 {% block content %}
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Smash — Home</title>
-    <!-- Tailwind CDN for quick prototype -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Smash — Home</title>
+      <!-- Tailwind CDN for quick prototype -->
+      <script src="https://cdn.tailwindcss.com"></script>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+            rel="stylesheet">
+      <style>
       :root { --bg-soft: #f7fff9; }
       body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
       /* quick custom scrollbar for desktop */
@@ -37,190 +36,156 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-      /* Modal styles */
-      .modal-backdrop {
-        background-color: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-      }
-    </style>
-  </head>
-  <body class="bg-gradient-to-b from-white via-emerald-50 to-pink-50 min-h-screen">
-
-    <div class="min-h-screen flex">
-      <!-- Sidebar -->
-      <aside class="w-64 bg-white/80 border-r border-gray-200 py-8 px-6 hidden lg:block">
-        <div class="flex items-center gap-3 mb-8">
-          <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">S</div>
-          <div>
-            <div class="text-xl font-semibold text-purple-800">Smash!</div>
-            <div class="text-xs text-gray-500">Community • Padel</div>
-          </div>
-        </div>
-
-        <nav class="space-y-4 text-sm text-gray-700">
-          <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">Thread</div>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-pink-50 text-pink-700 font-medium" href="#">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M3 16h18"/></svg>
-            Recent
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#"><span class="text-xl">🏷️</span> For You</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#"><span class="text-xl">🔥</span> Hot Thread</a>
-
-          <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Menu</div>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🔔 Notification</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🔖 Bookmark</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">👤 Profile</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">✉️ Message</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🧩 Communities</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">⚙️ Settings</a>
-
-          <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Others</div>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">ℹ️ Tentang SMASH</a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">📞 Hubungi Kami</a>
-
-          <!-- Logout Button -->
-          <div class="mt-8 pt-4 border-t border-gray-200">
-            <button id="logout-btn" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 w-full text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Logout
-            </button>
-          </div>
-
-          <div class="mt-8 text-xs text-gray-400">© 2025 SMASH. All rights reserved.</div>
-        </nav>
-      </aside>
-
-      <!-- Main content -->
-      <div class="flex-1">
-        <!-- Topbar -->
-        <header class="flex items-center justify-between px-6 py-5 bg-transparent backdrop-blur-sm sticky top-0 z-10">
-          <div class="flex items-center gap-4">
-            <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
-            <div class="hidden lg:flex items-center gap-4">
-              <div class="text-2xl font-extrabold text-purple-700">Smash!</div>
+      </style>
+    </head>
+    <body class="bg-gradient-to-b from-white via-emerald-50 to-pink-50 min-h-screen">
+      <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white/80 border-r border-gray-200 py-8 px-6 hidden lg:block">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">S</div>
+            <div>
+              <div class="text-xl font-semibold text-purple-800">Smash!</div>
+              <div class="text-xs text-gray-500">Community • Padel</div>
             </div>
-            <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd"/></svg>
-              <input type="search" placeholder="Search..." class="ml-3 outline-none w-full text-sm" />
-            </form>
           </div>
-
-          <div class="flex items-center gap-3">
-            <!-- Create Post Button -->
-            <button id="create-post-btn" class="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          <nav class="space-y-4 text-sm text-gray-700">
+            <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">Thread</div>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-pink-50 text-pink-700 font-medium"
+               href="#">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   class="h-5 w-5"
+                   fill="none"
+                   viewBox="0 0 24 24"
+                   stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M3 16h18" />
               </svg>
-              Create Post
-            </button>
-
-            <!-- User info and logout button for mobile -->
-            <span class="text-sm text-gray-700 hidden sm:block">Welcome, {{ request.user.username }}</span>
-            <button id="mobile-logout-btn" class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <!-- Filters + main feed -->
-        <main class="px-6 py-8">
-          <div class="flex items-center gap-3 mb-6">
-            <button class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm">Recent</button>
-            <button class="px-3 py-1 rounded-full bg-white text-gray-600 text-sm">For You</button>
-            <button class="px-3 py-1 rounded-full bg-white text-gray-600 text-sm">Hot Thread</button>
-          </div>
-
-          <!-- Feed column -->
-          <section class="max-w-4xl mx-auto" id="posts-container">
-            <!-- Posts will be loaded here dynamically -->
-            <div id="loading-posts" class="text-center py-12">
-              <div class="loading-spinner mx-auto mb-4"></div>
-              <p class="text-gray-500">Loading posts...</p>
+              Recent
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#"><span class="text-xl">🏷️</span> For You</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#"><span class="text-xl">🔥</span> Hot Thread</a>
+            <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Menu</div>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">🔔 Notification</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">🔖 Bookmark</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">👤 Profile</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">✉️ Message</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">🧩 Communities</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">⚙️ Settings</a>
+            <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Others</div>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">ℹ️ Tentang SMASH</a>
+            <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
+               href="#">📞 Hubungi Kami</a>
+            <!-- Logout Button - only show if authenticated -->
+            {% if user.is_authenticated %}
+              <div class="mt-8 pt-4 border-t border-gray-200">
+                <button id="logout-btn"
+                        onclick="handleLogout(); return false;"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 w-full text-left">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       class="h-5 w-5"
+                       fill="none"
+                       viewBox="0 0 24 24"
+                       stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            {% else %}
+              <!-- Login/Register buttons for sidebar -->
+              <div class="mt-8 pt-4 border-t border-gray-200 space-y-2">
+                <a href="{% url 'account:login_register' %}"
+                   class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 w-full">
+                  Register
+                </a>
+                <a href="{% url 'account:login_register' %}"
+                   class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 w-full">
+                  Login
+                </a>
+              </div>
+            {% endif %}
+            <div class="mt-8 text-xs text-gray-400">© 2025 SMASH. All rights reserved.</div>
+          </nav>
+        </aside>
+        <!-- Main content -->
+        <div class="flex-1">
+          <!-- Topbar -->
+          <header class="flex items-center justify-between px-6 py-5 bg-transparent backdrop-blur-sm sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+              <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
+              <div class="hidden lg:flex items-center gap-4">
+                <div class="text-2xl font-extrabold text-purple-700">Smash!</div>
+              </div>
+              <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="h-5 w-5 text-gray-400"
+                     viewBox="0 0 20 20"
+                     fill="currentColor">
+                  <path fill-rule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd" />
+                </svg>
+                <input type="search"
+                       placeholder="Search..."
+                       class="ml-3 outline-none w-full text-sm" />
+              </form>
             </div>
-          </section>
-        </main>
-      </div>
-    </div>
-
-    <!-- Create Post Modal -->
-    <div id="create-post-modal" class="fixed inset-0 z-50 hidden">
-      <div class="modal-backdrop absolute inset-0" id="modal-backdrop"></div>
-      <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all">
-          <!-- Modal Header -->
-          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-xl font-semibold text-gray-900">Create New Post</h3>
-            <button id="close-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Modal Body -->
-          <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            <form id="create-post-form" class="space-y-4">
-              {% csrf_token %}
-              
-              <!-- Title Input -->
-              <div>
-                <label for="post-title" class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-                <input type="text" id="post-title" name="title" required 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                       placeholder="What's on your mind?">
+            <div class="flex items-center gap-3">
+              <!-- User info and logout button for logged in users -->
+              {% if user.is_authenticated %}
+                <span class="text-sm text-gray-700 hidden sm:block">Welcome, {{ user.username }}</span>
+                <button id="mobile-logout-btn"
+                        onclick="handleLogout(); return false;"
+                        class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       class="h-4 w-4"
+                       fill="none"
+                       viewBox="0 0 24 24"
+                       stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
+              {% else %}
+                <!-- Login and Register buttons for non-logged in users -->
+                <a href="{% url 'account:login_register' %}"
+                   class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2 hover:bg-blue-700">
+                  Register
+                </a>
+                <a href="{% url 'account:login_register' %}"
+                   class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm hidden sm:flex items-center gap-2 hover:bg-gray-100">
+                  Login
+                </a>
+              {% endif %}
+            </div>
+          </header>
+          <!-- Filters + main feed -->
+          <main class="px-6 py-8">
+            <div class="flex items-center gap-3 mb-6">
+              <button class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm">Recent</button>
+              <button class="px-3 py-1 rounded-full bg-white text-gray-600 text-sm">For You</button>
+              <button class="px-3 py-1 rounded-full bg-white text-gray-600 text-sm">Hot Thread</button>
+            </div>
+            <!-- Feed column -->
+            <section class="max-w-4xl mx-auto" id="posts-container">
+              <!-- Posts will be loaded here dynamically -->
+              <div id="loading-posts" class="text-center py-12">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-500">Loading posts...</p>
               </div>
-
-              <!-- Content Input -->
-              <div>
-                <label for="post-content" class="block text-sm font-medium text-gray-700 mb-2">Content *</label>
-                <textarea id="post-content" name="content" required rows="6"
-                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-                          placeholder="Share your thoughts, experiences, or questions..."></textarea>
-              </div>
-
-              <!-- Image Upload -->
-              <div>
-                <label for="post-image" class="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
-                <input type="file" id="post-image" name="image" accept="image/*"
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF</p>
-              </div>
-
-              <!-- Video Link -->
-              <div>
-                <label for="post-video" class="block text-sm font-medium text-gray-700 mb-2">Video Link (Optional)</label>
-                <input type="url" id="post-video" name="video_link"
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                       placeholder="https://youtube.com/...">
-              </div>
-
-              <!-- Form Messages -->
-              <div id="form-messages" class="hidden"></div>
-            </form>
-          </div>
-
-          <!-- Modal Footer -->
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-            <button type="button" id="cancel-post" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-              Cancel
-            </button>
-            <button type="submit" form="create-post-form" id="submit-post" 
-                    class="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors flex items-center gap-2">
-              <span>Create Post</span>
-              <div id="submit-spinner" class="hidden loading-spinner border-white border-t-transparent"></div>
-            </button>
-          </div>
+            </section>
+          </main>
         </div>
       </div>
-    </div>
-
-    <!-- JavaScript for dynamic posts, logout, and create post -->
-    <script>
+      <!-- JavaScript for dynamic posts and logout -->
+      <script>
       // CSRF Token for AJAX requests
       function getCookie(name) {
         let cookieValue = null;
@@ -676,17 +641,25 @@
 
       // Logout function
       function handleLogout() {
+        console.log('Logout function called');
         if (confirm('Are you sure you want to logout?')) {
+          console.log('User confirmed logout');
           fetch('/account/logout/ajax/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRFToken': csrftoken
+              'X-CSRFToken': csrftoken,
+              'X-Requested-With': 'XMLHttpRequest'
             }
           })
-          .then(response => response.json())
+          .then(response => {
+            console.log('Logout response status:', response.status);
+            return response.json();
+          })
           .then(data => {
+            console.log('Logout response data:', data);
             if (data.success) {
+              console.log('Redirecting to:', data.redirect_url);
               window.location.href = data.redirect_url;
             } else {
               alert('Logout failed. Please try again.');
@@ -694,7 +667,7 @@
           })
           .catch(error => {
             console.error('Logout error:', error);
-            alert('Logout failed. Please try again.');
+            alert('Logout failed: ' + error.message);
           });
         }
       }
@@ -704,8 +677,7 @@
         if (!unsafe) return '';
         return unsafe
           .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
+          .replace(/</g , "&lt;") .replace( />/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#039;");
       }
@@ -739,8 +711,7 @@
         document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
         document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
       });
-    </script>
-  </body>
-</html>
-
+      </script>
+    </body>
+  </html>
 {% endblock content %}
