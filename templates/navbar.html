@@ -1,3 +1,4 @@
+{% extends 'base.html' %}
 {% load static %}
 <nav class="navbar">
   <div class="navbar-left">
@@ -15,8 +16,10 @@
 
   <!-- Kolom pencarian -->
   <div class="navbar-search">
+  <form id="searchForm" action="{% url 'search_posts' %}" method="GET" style="display:flex;align-items:center;width:100%;">
     <i class="fas fa-search"></i>
-    <input type="text" placeholder="Search...">
+    <input type="text" name="q" placeholder="Search..." value="{{ request.GET.q }}" required>
+  </form>
   </div>
 
   <!-- Bagian kanan -->
@@ -261,6 +264,20 @@ document.addEventListener("DOMContentLoaded", function() {
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener("click", function() {
       sidebar.classList.toggle("open");
+    });
+  }
+});
+
+// === Fungsi pencarian ===
+document.addEventListener("DOMContentLoaded", function() {
+  const searchForm = document.getElementById("searchForm");
+  if (searchForm) {
+    searchForm.addEventListener("submit", function(e) {
+      const input = searchForm.querySelector("input[name='q']");
+      if (!input.value.trim()) {
+        e.preventDefault(); // Cegah submit kosong
+        alert("Ketik sesuatu untuk mencari post atau thread.");
+      }
     });
   }
 });
