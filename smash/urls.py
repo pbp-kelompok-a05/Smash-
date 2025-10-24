@@ -26,11 +26,14 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("main.urls")),  # contoh
     path("posts/", include("post.urls")),
-    path("", include("account.urls")),  # <-- pastikan account.urls di-include (root)
     path("comments/", include("comment.urls")),
     path("reports/", include("report.urls")),
     # optional: fallback redirect dari /accounts/login/ -> named 'login'
     path(
         "accounts/login/", RedirectView.as_view(pattern_name="login", permanent=False)
+    ),
+    path(
+        "accounts/register/",
+        RedirectView.as_view(pattern_name="register", permanent=False),
     ),
 ]
