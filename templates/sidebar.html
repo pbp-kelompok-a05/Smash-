@@ -1,0 +1,163 @@
+<nav class="sidebar" id="sidebar">
+  <!-- THREAD SECTION -->
+  <div class="sidebar-section">
+    <h4 class="sidebar-title">Thread</h4>
+    <ul>
+      <li class="sidebar-item active">
+        <a href="{% url 'recent_thread' %}">
+          <i class="fas fa-clock"></i>
+          <span>Recent</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{% url 'hot_thread' %}">
+          <i class="fas fa-fire"></i>
+          <span>Hot Thread</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- MENU SECTION -->
+  <div class="sidebar-section">
+    <h4 class="sidebar-title">Menu</h4>
+    <ul>
+      <li class="sidebar-item">
+        <a href="{% url 'bookmark' %}">
+          <i class="fas fa-bookmark"></i>
+          <span>Bookmark</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{% url 'profile' user.username %}">
+          <i class="fas fa-user"></i>
+          <span>Profile</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- OTHERS SECTION -->
+  <div class="sidebar-section">
+    <h4 class="sidebar-title">Others</h4>
+    <ul>
+      <li class="sidebar-item">
+        <a href="{% url 'about' %}">
+          <i class="fas fa-info-circle"></i>
+          <span>Tentang Smash</span>
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="{% url 'contact' %}">
+          <i class="fas fa-envelope"></i>
+          <span>Hubungi Kami</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<style>
+/* ===== Sidebar Struktur ===== */
+.sidebar {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #eee;
+  height: 100vh;
+  padding: 16px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  z-index: 900;
+}
+
+.sidebar-section {
+  margin-bottom: 24px;
+}
+
+.sidebar-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #999;
+  margin: 0 16px 8px 16px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-item {
+  margin-bottom: 4px;
+}
+
+.sidebar-item a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #444;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  font-size: 15px;
+}
+
+.sidebar-item a i {
+  font-size: 16px;
+  width: 18px;
+  text-align: center;
+  color: #6a1b9a;
+}
+
+/* ===== Efek Hover ===== */
+.sidebar-item a:hover {
+  background: #ffe6f7;
+  border-left: 3px solid #c71585;
+  color: #6a1b9a;
+}
+
+/* ===== Tombol Aktif ===== */
+.sidebar-item.active a {
+  background: #ffe6f7;
+  border-left: 3px solid #a64ac9; /* ungu lembut */
+  color: #6a1b9a;
+  font-weight: 600;
+}
+
+.sidebar-item.active a i {
+  color: #6a1b9a;
+}
+
+/* ===== Responsif ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 220px;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 2px 0 6px rgba(0,0,0,0.1);
+  }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const items = document.querySelectorAll(".sidebar-item");
+
+  // Tandai item aktif secara dinamis
+  items.forEach(item => {
+    item.addEventListener("click", function() {
+      items.forEach(i => i.classList.remove("active"));
+      this.classList.add("active");
+    });
+  });
+});
+</script>
