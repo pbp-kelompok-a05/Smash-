@@ -1,15 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from post.models import ForumPost, PostLike
+from post.models import Post
 from django.http import HttpResponseRedirect, JsonResponse
-from account.models import Account
 from profil.models import Profile
 from profil.forms import ProfileForm
 
 
 def show_views(request):
-    account = get_object_or_404(Account, user=request.user)
-    post_list = ForumPost.objects.all()
-    like_list = PostLike.objects.all()
+    post_list = Post.objects.all()
     return render(request, "main.html")
 
 
@@ -27,43 +24,18 @@ def create_profil(request):
 
 
 def show_json(request):
-    post_list = ForumPost.objects.all()
-    like_list = PostLike.objects.all()
-    post_data = [
+    post_list = Post.objects.all()
+    data = [
         {
-            "id": str(post.id),
+            "author": post.user,
             "title": post.title,
             "content": post.content,
-            "category": post.category,
             "image": post.image,
-            "url_vid": post.video_url,
-            "like": post.get_likes_count,
-            "comment": post.get_comment_count,
+            "url_vid": post.video_link,
             "created_at": post.created_at.isoformat() if post.created_at else None,
-            "user_name": post.author.username,
-            "author_id": post.author.id,
+            "user_name": post.user.username,
+            "author_id": post.user.id,
         }
         for post in post_list
     ]
-    like_data = [
-        {
-            "id": str(post.id),
-            "title": post.title,
-            "content": post.content,
-            "category": post.category,
-            "image": post.image,
-            "url_vid": post.video_url,
-            "like": post.get_likes_count,
-            "is_like": post.is_like,
-            "comment": post.get_comment_count,
-            "created_at": post.created_at.isoformat() if post.created_at else None,
-            "user_name": post.author.username,
-            "author_id": post.author.id,
-        }
-        for post in like_list
-    ]
-    data = {
-        "post": post_data,
-        "like": like_data,
-    }
     return JsonResponse(data, safe=False)
