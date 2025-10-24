@@ -8,7 +8,7 @@ from django.urls import reverse
 def login_register_view(request):
     # Jika user sudah login, redirect ke main page
     if request.user.is_authenticated:
-        return redirect('main:home')
+        return redirect('main:home')  # Pastikan nama URL ini sesuai dengan routing di app main
     return render(request, "account/login_register.html")
 
 def register_ajax(request):
