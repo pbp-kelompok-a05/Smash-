@@ -19,7 +19,7 @@ def manage_ads(request):
     if request.method == 'POST':
         form = AdForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            ad = form.save()
             if request.headers.get("x-requested-with") == "XMLHttpRequest":
                 html = render_to_string("ads/partials/ad_card.html", {"ad": ad})
                 return JsonResponse({"success": True, "html": html})
