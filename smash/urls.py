@@ -23,10 +23,13 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     # Include app URLs
-    path("", include("homepage.urls")),
+    # path("", include("homepage.urls")),
     path("accounts/", include("account.urls")),
     path("forum/", include("post.urls")),
     path("report/", include("report.urls")),
     path("ads/", include("ads.urls")),
     path("", include("comment.urls")),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
