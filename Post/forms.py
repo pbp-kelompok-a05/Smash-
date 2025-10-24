@@ -8,7 +8,7 @@ from django.utils.html import strip_tags
 class ReportForm(ModelForm):
     class Meta:
         model = ForumPost
-        fields = ["title", "content", "category", "image", "media"]
+        fields = ["title", "content", "category", "image", "video-url"]
         # Menambahkan widgets
         widgets = {
             # Handle untuk form Post Title
