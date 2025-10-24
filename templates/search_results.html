@@ -1,21 +1,13 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
-<div style="max-width:700px;margin:auto;padding:20px;">
-  <h2>Hasil pencarian untuk: "{{ query }}"</h2>
-  
-  {% if results %}
-    <ul style="list-style:none;padding:0;">
-      {% for item in results %}
-        <li style="padding:12px 0;border-bottom:1px solid #eee;">
-          <a href="{% url 'post_detail' item.id %}" style="text-decoration:none;color:#333;">
-            <strong>{{ item.title }}</strong><br>
-            <small>{{ item.content|truncatewords:20 }}</small>
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>Tidak ada hasil ditemukan.</p>
-  {% endif %}
-</div>
+  <div class="container">
+    <h2>Hasil pencarian untuk "{{ search_query }}"</h2>
+    {% if posts %}
+      {% include "card_view.html" with posts=posts %}
+    {% else %}
+      <p>Tidak ada hasil ditemukan.</p>
+    {% endif %}
+  </div>
 {% endblock %}
