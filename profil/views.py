@@ -7,7 +7,10 @@ from profil.forms import ProfileForm
 
 def show_views(request):
     post_list = Post.objects.all()
-    return render(request, "main.html")
+    context={
+        'post_list' : post_list
+    }
+    return render(request, "main.html",context)
 
 
 # Create your views here.

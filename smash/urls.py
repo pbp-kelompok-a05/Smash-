@@ -27,7 +27,8 @@ urlpatterns = [
     path("", include("main.urls")),                # ← BIARKAN MAIN MENANGANI ROOT
     path("post/", include("post.urls")),           # ← GUNAKAN PATH SPESIFIK
     path("comments/", include("comment.urls")),
-    path("reports/", include("report.urls"))
+    path("reports/", include("report.urls")),
+    path("profil/", include("profil.urls")),
 ]
 
 if settings.DEBUG:
