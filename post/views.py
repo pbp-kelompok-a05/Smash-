@@ -1,6 +1,7 @@
 # post/views.py
 import json
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -10,6 +11,7 @@ from django.contrib.auth import get_user_model
 from .models import Post
 from comment.models import Comment
 from report.models import Report
+from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
 
@@ -221,6 +223,7 @@ class PostAPIView(View):
         """
         PUT: Update existing post
         AJAX Support: ✅
+        Mendukung FormData untuk file upload
         """
         try:
             if not request.user.is_authenticated:
@@ -238,17 +241,57 @@ class PostAPIView(View):
                     'message': 'Anda tidak memiliki izin untuk mengedit post ini'
                 }, status=403)
             
-            data = json.loads(request.body)
+            # Handle FormData
+            if request.content_type == 'multipart/form-data':
+                # Get data from FormData
+                title = request.POST.get('title')
+                content = request.POST.get('content')
+                video_link = request.POST.get('video_link', '')
+                remove_image = request.POST.get('remove_image') == 'true'
+            else:
+                # Handle regular JSON
+                data = json.loads(request.body)
+                title = data.get('title')
+                content = data.get('content')
+                video_link = data.get('video_link', '')
+                remove_image = False
             
             # Update fields
-            update_fields = ['title', 'content', 'video_link']
-            for field in update_fields:
-                if field in data:
-                    setattr(post, field, data[field])
+            if title is not None:
+                post.title = title
+            if content is not None:
+                post.content = content
+            if video_link is not None:
+                post.video_link = video_link
             
-            # Handle image update
+            # Handle image removal
+            if remove_image and post.image:
+                post.image.delete(save=False)
+                post.image = None
+            
+            # Handle new image upload
             if request.FILES.get('image'):
-                post.image = request.FILES['image']
+                # Validasi file type
+                image_file = request.FILES['image']
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+                if image_file.content_type not in allowed_types:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'File type tidak didukung. Gunakan JPG, PNG, atau GIF.'
+                    }, status=400)
+                
+                # Validasi file size (max 5MB)
+                if image_file.size > 5 * 1024 * 1024:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Ukuran file terlalu besar. Maksimal 5MB.'
+                    }, status=400)
+                
+                # Delete old image if exists
+                if post.image:
+                    post.image.delete(save=False)
+                
+                post.image = image_file
             
             post.save()
             
@@ -378,3 +421,20 @@ class PostInteractionView(View):
                 'status': 'error',
                 'message': f'Error processing action: {str(e)}'
             }, status=500)
+        
+@login_required
+def edit_post_page(request, post_id):
+    """
+    View untuk halaman edit post
+    """
+    post = get_object_or_404(Post, id=post_id)
+    
+    # Check permissions
+    if post.user != request.user and not (request.user.is_superuser or request.user.has_perm('post.manage_all_posts')):
+        return redirect('main:home')
+    
+    context = {
+        'post': post,
+        'page_title': f'Edit Post - {post.title}'
+    }
+    return render(request, 'edit_post.html', context)
