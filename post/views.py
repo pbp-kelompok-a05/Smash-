@@ -1,6 +1,7 @@
 # post/views.py
 import json
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -10,6 +11,7 @@ from django.contrib.auth import get_user_model
 from .models import Post
 from comment.models import Comment
 from report.models import Report
+from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
 
@@ -241,6 +243,7 @@ class PostAPIView(View):
         """
         PUT: Update existing post
         AJAX Support: ✅
+        Mendukung FormData untuk file upload
         """
         try:
             if not request.user.is_authenticated:

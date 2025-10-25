@@ -51,4 +51,7 @@ urlpatterns = [
     path('user/bookmarked/', 
          views.PostAPIView.as_view(), 
          name='user-bookmarked-posts'),
+
+    # Delete and Edit
+    path('<int:post_id>/', views.PostAPIView.as_view(), name='post_detail_api'),
 ]

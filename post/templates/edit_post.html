@@ -1,0 +1,331 @@
+<!-- post/templates/post/edit_post.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>{{ page_title }}</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-b from-white via-emerald-50 to-pink-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="{% url 'main:home' %}" class="inline-flex items-center text-purple-600 hover:text-purple-700 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Back to Home
+            </a>
+            <h1 class="text-3xl font-bold text-gray-900">Edit Post</h1>
+            <p class="text-gray-600 mt-2">Make changes to your post</p>
+        </div>
+
+        <!-- Edit Post Form -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <form id="edit-post-form" class="p-6" data-post-id="{{ post.id }}">
+                {% csrf_token %}
+                
+                <!-- Title Input -->
+                <div class="mb-6">
+                    <label for="edit-post-title" class="block text-sm font-medium text-gray-700 mb-2">
+                        Title *
+                    </label>
+                    <input type="text" 
+                           id="edit-post-title" 
+                           name="title" 
+                           value="{{ post.title }}"
+                           required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg font-medium"
+                           placeholder="What's on your mind?">
+                </div>
+
+                <!-- Content Input -->
+                <div class="mb-6">
+                    <label for="edit-post-content" class="block text-sm font-medium text-gray-700 mb-2">
+                        Content *
+                    </label>
+                    <textarea id="edit-post-content" 
+                              name="content" 
+                              required 
+                              rows="12"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                              placeholder="Share your thoughts, experiences, or questions...">{{ post.content }}</textarea>
+                </div>
+
+                <!-- Current Image Preview -->
+                {% if post.image %}
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Current Image
+                    </label>
+                    <div class="relative">
+                        <img src="{{ post.image.url }}" 
+                             alt="Current post image" 
+                             class="w-full max-w-md rounded-lg object-cover">
+                        <button type="button" 
+                                id="remove-image-btn"
+                                class="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="hidden" id="remove_image" name="remove_image" value="false">
+                </div>
+                {% endif %}
+
+                <!-- New Image Upload -->
+                <div class="mb-6">
+                    <label for="edit-post-image" class="block text-sm font-medium text-gray-700 mb-2">
+                        {% if post.image %}Change Image{% else %}Add Image{% endif %} (Optional)
+                    </label>
+                    <input type="file" 
+                           id="edit-post-image" 
+                           name="image" 
+                           accept="image/*"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF. Max 5MB.</p>
+                </div>
+
+                <!-- Video Link -->
+                <div class="mb-6">
+                    <label for="edit-post-video" class="block text-sm font-medium text-gray-700 mb-2">
+                        Video Link (Optional)
+                    </label>
+                    <input type="url" 
+                           id="edit-post-video" 
+                           name="video_link" 
+                           value="{{ post.video_link|default:'' }}"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                           placeholder="https://youtube.com/...">
+                </div>
+
+                <!-- Form Messages -->
+                <div id="edit-form-messages" class="mb-6"></div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                    <button type="button" 
+                            id="cancel-edit" 
+                            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                        Cancel
+                    </button>
+                    
+                    <div class="flex items-center gap-3">
+                        <button type="button" 
+                                id="delete-post-btn"
+                                class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                            Delete Post
+                        </button>
+                        
+                        <button type="submit" 
+                                id="submit-edit"
+                                class="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors font-medium flex items-center gap-2">
+                            <span>Update Post</span>
+                            <div id="edit-submit-spinner" class="hidden loading-spinner border-white border-t-transparent"></div>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-2xl p-6 max-w-md mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete Post</h3>
+        <p class="text-gray-600 mb-6">Are you sure you want to delete this post? This action cannot be undone.</p>
+        
+        <div class="flex justify-end gap-3">
+            <button type="button" 
+                    id="cancel-delete"
+                    class="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium">
+                Cancel
+            </button>
+            <button type="button" 
+                    id="confirm-delete"
+                    class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// CSRF Token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Utility functions
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function showMessage(message, type, container) {
+    container.innerHTML = `<div class="p-4 rounded-lg ${type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}">${message}</div>`;
+}
+
+// Remove image functionality
+const removeImageBtn = document.getElementById('remove-image-btn');
+const removeImageInput = document.getElementById('remove_image');
+
+if (removeImageBtn && removeImageInput) {
+    removeImageBtn.addEventListener('click', function() {
+        this.closest('.mb-6').remove();
+        removeImageInput.value = 'true';
+    });
+}
+
+// Cancel button
+document.getElementById('cancel-edit').addEventListener('click', function() {
+    if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+        window.location.href = "{% url 'main:home' %}";
+    }
+});
+
+// Delete post functionality
+const deleteModal = document.getElementById('delete-modal');
+const deletePostBtn = document.getElementById('delete-post-btn');
+const cancelDeleteBtn = document.getElementById('cancel-delete');
+const confirmDeleteBtn = document.getElementById('confirm-delete');
+
+deletePostBtn.addEventListener('click', function() {
+    deleteModal.classList.remove('hidden');
+});
+
+cancelDeleteBtn.addEventListener('click', function() {
+    deleteModal.classList.add('hidden');
+});
+
+confirmDeleteBtn.addEventListener('click', function() {
+    const postId = document.getElementById('edit-post-form').dataset.postId;
+    
+    fetch(`/post/${postId}/`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage('Post deleted successfully!', 'success', document.getElementById('edit-form-messages'));
+            setTimeout(() => {
+                window.location.href = "{% url 'main:home' %}";
+            }, 1500);
+        } else {
+            showMessage(data.message || 'Error deleting post', 'error', document.getElementById('edit-form-messages'));
+        }
+        deleteModal.classList.add('hidden');
+    })
+    .catch(error => {
+        console.error('Error deleting post:', error);
+        showMessage('Network error. Please try again.', 'error', document.getElementById('edit-form-messages'));
+        deleteModal.classList.add('hidden');
+    });
+});
+
+// Form submission
+document.getElementById('edit-post-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submit-edit');
+    const spinner = document.getElementById('edit-submit-spinner');
+    const messagesContainer = document.getElementById('edit-form-messages');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    spinner.classList.remove('hidden');
+    submitBtn.innerHTML = '<span>Updating...</span>';
+    
+    try {
+        const formData = new FormData();
+        const postId = this.dataset.postId;
+        
+        // Add form data
+        formData.append('title', document.getElementById('edit-post-title').value);
+        formData.append('content', document.getElementById('edit-post-content').value);
+        formData.append('video_link', document.getElementById('edit-post-video').value || '');
+        
+        // Add remove image flag if exists
+        if (removeImageInput) {
+            formData.append('remove_image', removeImageInput.value);
+        }
+        
+        // Add new image if selected
+        const imageFile = document.getElementById('edit-post-image').files[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+        
+        const response = await fetch(`/post/${postId}/`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showMessage('Post updated successfully!', 'success', messagesContainer);
+            setTimeout(() => {
+                window.location.href = "{% url 'main:home' %}";
+            }, 1500);
+        } else {
+            showMessage(data.message || 'Error updating post', 'error', messagesContainer);
+        }
+    } catch (error) {
+        console.error('Error updating post:', error);
+        showMessage('Network error. Please try again.', 'error', messagesContainer);
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        spinner.classList.add('hidden');
+        submitBtn.innerHTML = originalText;
+    }
+});
+</script>
+
+<style>
+.loading-spinner {
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock content %}
