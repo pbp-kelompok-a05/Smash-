@@ -6,8 +6,6 @@
 {% endblock meta %}
 
 {% block content %}
-{% include 'navbar.html' %}
-{% include 'sidebar.html' %}
 <div class="bg-gradient-to-br from-green-100 via-white to-pink-100 w-full pt-16 min-h-screen">
         <div class="max-w-4xl mx-auto bg-gray-100 rounded-xl p-8 mt-6 shadow-lg">
             <div class="overflow-y-auto flex-1">
@@ -19,12 +17,11 @@
                             <h2 class="text-lg">Hello,</h2>
                             <h1 id="profile-name" class="text-4xl font-extrabold">Loading...</h1>
                             <p id="user-bio" class="text-gray-600 mt-1">
-                              {{ user.profile.bio|default:"Belum ada bio" }}
                             </p>
                         </div>
                     </div>
                     
-                    <a href="{% url 'main:edit_profile' %}">
+                    <a href="{% url 'profil:edit_or_create_profile' %}">
                       <button>+ edit bio</button>
                     </a>
                     <div class="flex gap-3 mt-4">
@@ -76,9 +73,7 @@ const emptyStateDisplay = document.getElementById('empty');
 
 //initial values
 document.getElementById('profile-name').textContent = '{{ user.username }}';
-document.getElementById('user-bio').textContent =
-  '{{ user.profile.bio|default:"Belum ada bio" }}';
-
+document.getElementById('user-bio').textContent = '{{ bio|escapejs }}';
 //state variable
 let activeFilter = 'my';
 let allPostData=[]
@@ -110,7 +105,6 @@ function displayPageSection({ showLoading = false, showError = false, showEmpty 
 // Create news card element
 function buildPostCardElement(item) {
   // --- sanitise semua input ---
-  const linkDetail = `{% url 'post:user/post/' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', '');
   const title      = DOMPurify.sanitize(item.title);
   const content    = DOMPurify.sanitize(item.content);
   const image      = DOMPurify.sanitize(item.image || '');
@@ -143,8 +137,8 @@ function buildPostCardElement(item) {
     <!-- Body -->
     <div class="p-5">
       <h2 class="text-lg font-bold text-gray-900 mb-2">${title}</h2>
-      <p class="text-gray-700 leading-relaxed mb-4">${content.substring(0, 200)}
-        ${content.length > 200 ? `<a href='${linkDetail}' class="text-blue-500 font-medium hover:underline">...view more</a>` : ''}
+      <p class="text-gray-700 leading-relaxed mb-4">
+        ${content.substring(0, 200)}
       </p>
 
       ${image ? `<img src="${image}" alt="${title}" class="rounded-xl w-full object-cover mb-4 transition-transform duration-300 hover:scale-[1.02]">` : ''}
