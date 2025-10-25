@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
 from django.contrib.auth import get_user_model
-from .models import Post
+from .models import Post, PostInteraction
 from comment.models import Comment
 from report.models import Report
 from django.contrib.auth.decorators import login_required
@@ -56,6 +56,17 @@ class PostAPIView(View):
                         status=404,
                     )
 
+                # Get user interaction if authenticated
+                user_interaction = None
+                if request.user.is_authenticated:
+                    try:
+                        interaction = PostInteraction.objects.get(
+                            user=request.user, post=post
+                        )
+                        user_interaction = interaction.interaction_type
+                    except PostInteraction.DoesNotExist:
+                        pass
+
                 post_data = {
                     "id": post.id,
                     "title": post.title,
@@ -67,6 +78,9 @@ class PostAPIView(View):
                     "created_at": post.created_at.isoformat(),
                     "updated_at": post.updated_at.isoformat(),
                     "comment_count": post.comments.filter(is_deleted=False).count(),
+                    "likes_count": post.likes_count,
+                    "dislikes_count": post.dislikes_count,
+                    "user_interaction": user_interaction,
                     "can_edit": self.get_user_permissions(request.user, post)[0]
                     or self.get_user_permissions(request.user, post)[1],
                 }
@@ -95,6 +109,17 @@ class PostAPIView(View):
 
                 posts_data = []
                 for post in posts[start:end]:
+                    # Get user interaction if authenticated
+                    user_interaction = None
+                    if request.user.is_authenticated:
+                        try:
+                            interaction = PostInteraction.objects.get(
+                                user=request.user, post=post
+                            )
+                            user_interaction = interaction.interaction_type
+                        except PostInteraction.DoesNotExist:
+                            pass
+
                     posts_data.append(
                         {
                             "id": post.id,
@@ -107,6 +132,9 @@ class PostAPIView(View):
                             "comment_count": post.comments.filter(
                                 is_deleted=False
                             ).count(),
+                            "likes_count": post.likes_count,
+                            "dislikes_count": post.dislikes_count,
+                            "user_interaction": user_interaction,
                             "can_edit": self.get_user_permissions(request.user, post)[0]
                             or self.get_user_permissions(request.user, post)[1],
                         }
@@ -365,7 +393,57 @@ class PostInteractionView(View):
             post = Post.objects.get(id=post_id, is_deleted=False)
             data = json.loads(request.body) if request.body else {}
 
-            if action == "report":
+            if action == "like" or action == "dislike":
+                # Handle like/dislike action
+                try:
+                    interaction = PostInteraction.objects.get(
+                        user=request.user, post=post
+                    )
+
+                    # If same interaction, remove it (toggle off)
+                    if interaction.interaction_type == action:
+                        interaction.delete()
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": f"{action.capitalize()} removed",
+                                "action": "removed",
+                                "likes_count": post.likes_count,
+                                "dislikes_count": post.dislikes_count,
+                                "user_interaction": None,
+                            }
+                        )
+                    else:
+                        # Change interaction type (like to dislike or vice versa)
+                        interaction.interaction_type = action
+                        interaction.save()
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": f"Changed to {action}",
+                                "action": "changed",
+                                "likes_count": post.likes_count,
+                                "dislikes_count": post.dislikes_count,
+                                "user_interaction": action,
+                            }
+                        )
+                except PostInteraction.DoesNotExist:
+                    # Create new interaction
+                    PostInteraction.objects.create(
+                        user=request.user, post=post, interaction_type=action
+                    )
+                    return JsonResponse(
+                        {
+                            "status": "success",
+                            "message": f"Post {action}d",
+                            "action": "added",
+                            "likes_count": post.likes_count,
+                            "dislikes_count": post.dislikes_count,
+                            "user_interaction": action,
+                        }
+                    )
+
+            elif action == "report":
                 # Handle report action
                 report = Report.objects.create(
                     reporter=request.user,
