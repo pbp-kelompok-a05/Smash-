@@ -561,10 +561,6 @@
                                       <span class="font-medium">${post.comment_count || 0}</span>
                                       <span>comments</span>
                                   </div>
-                                  <div class="flex items-center gap-2">
-                                      <span class="font-medium post-shares-count">0</span>
-                                      <span>shares</span>
-                                  </div>
                               </div>
                           </div>
 
@@ -1090,10 +1086,6 @@
           document.querySelectorAll('.share-btn').forEach(btn => {
               btn.addEventListener('click', function() {
                   const postId = this.dataset.postId;
-                  const sharesCount = this.closest('footer').querySelector('.post-shares-count');
-                  if (sharesCount) {
-                      sharesCount.textContent = (parseInt(sharesCount.textContent) || 0) + 1;
-                  }
                   
                   // Simple share implementation
                   if (navigator.share) {
