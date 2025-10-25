@@ -54,5 +54,4 @@ urlpatterns = [
 
     # Delete and Edit
     path('<int:post_id>/', views.PostAPIView.as_view(), name='post_detail_api'),
-    path('edit/<int:post_id>/', views.edit_post_page, name='edit_post'),
 ]

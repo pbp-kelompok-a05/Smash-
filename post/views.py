@@ -256,65 +256,6 @@ class PostAPIView(View):
             is_owner, is_superuser = self.get_user_permissions(request.user, post)
 
             if not (is_owner or is_superuser):
-<<<<<<< HEAD
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Anda tidak memiliki izin untuk mengedit post ini'
-                }, status=403)
-            
-            # Handle FormData
-            if request.content_type == 'multipart/form-data':
-                # Get data from FormData
-                title = request.POST.get('title')
-                content = request.POST.get('content')
-                video_link = request.POST.get('video_link', '')
-                remove_image = request.POST.get('remove_image') == 'true'
-            else:
-                # Handle regular JSON
-                data = json.loads(request.body)
-                title = data.get('title')
-                content = data.get('content')
-                video_link = data.get('video_link', '')
-                remove_image = False
-            
-            # Update fields
-            if title is not None:
-                post.title = title
-            if content is not None:
-                post.content = content
-            if video_link is not None:
-                post.video_link = video_link
-            
-            # Handle image removal
-            if remove_image and post.image:
-                post.image.delete(save=False)
-                post.image = None
-            
-            # Handle new image upload
-            if request.FILES.get('image'):
-                # Validasi file type
-                image_file = request.FILES['image']
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif']
-                if image_file.content_type not in allowed_types:
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': 'File type tidak didukung. Gunakan JPG, PNG, atau GIF.'
-                    }, status=400)
-                
-                # Validasi file size (max 5MB)
-                if image_file.size > 5 * 1024 * 1024:
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': 'Ukuran file terlalu besar. Maksimal 5MB.'
-                    }, status=400)
-                
-                # Delete old image if exists
-                if post.image:
-                    post.image.delete(save=False)
-                
-                post.image = image_file
-            
-=======
                 return JsonResponse(
                     {
                         "status": "error",
@@ -335,7 +276,6 @@ class PostAPIView(View):
             if request.FILES.get("image"):
                 post.image = request.FILES["image"]
 
->>>>>>> db2762d9d701ecce44525e0fa5c62c3d9b2db205
             post.save()
 
             return JsonResponse(
@@ -464,31 +404,7 @@ class PostInteractionView(View):
                 {"status": "error", "message": "Post tidak ditemukan"}, status=404
             )
         except Exception as e:
-<<<<<<< HEAD
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Error processing action: {str(e)}'
-            }, status=500)
-        
-@login_required
-def edit_post_page(request, post_id):
-    """
-    View untuk halaman edit post
-    """
-    post = get_object_or_404(Post, id=post_id)
-    
-    # Check permissions
-    if post.user != request.user and not (request.user.is_superuser or request.user.has_perm('post.manage_all_posts')):
-        return redirect('main:home')
-    
-    context = {
-        'post': post,
-        'page_title': f'Edit Post - {post.title}'
-    }
-    return render(request, 'edit_post.html', context)
-=======
             return JsonResponse(
                 {"status": "error", "message": f"Error processing action: {str(e)}"},
                 status=500,
             )
->>>>>>> db2762d9d701ecce44525e0fa5c62c3d9b2db205
