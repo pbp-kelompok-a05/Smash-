@@ -110,8 +110,7 @@ function displayPageSection({ showLoading = false, showError = false, showEmpty 
 // Create news card element
 function buildPostCardElement(item) {
   // --- sanitise semua input ---
-  const linkDetail = `{% url 'post:user/post/' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.id);
-  const id         = DOMPurify.sanitize(item.id);
+  const linkDetail = `{% url 'post:user/post/' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', '');
   const title      = DOMPurify.sanitize(item.title);
   const content    = DOMPurify.sanitize(item.content);
   const image      = DOMPurify.sanitize(item.image || '');
@@ -265,8 +264,7 @@ async function fetchPostFromServer() {
     }
 
     const postData = await response.json();
-    allPostData   = postData.post   || [];
-    allLikedPost  = postData.like   || [];
+    allPostData   = postData  || [];
     filterAndDisplayPost();
   } catch (error) {
     console.error('Error loading post:', error);
