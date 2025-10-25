@@ -3,8 +3,9 @@ from post.models import Post
 from django.http import HttpResponseRedirect, JsonResponse
 from profil.models import Profile
 from profil.forms import ProfileForm
+from django.contrib.auth.decorators import login_required
 
-
+@login_required(login_url='account:login_register')
 def show_views(request):
     post_list = Post.objects.all()
     try:
