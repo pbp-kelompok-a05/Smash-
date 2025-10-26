@@ -15,7 +15,6 @@ from django.contrib.auth.decorators import login_required
 
 User = get_user_model()
 
-
 class PostAPIView(View):
     """
     API View untuk handling CRUD operations pada Post.
