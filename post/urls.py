@@ -54,7 +54,12 @@ urlpatterns = [
 
     # Delete and Edit
     path('<int:post_id>/', views.PostAPIView.as_view(), name='post_detail_api'),
-    
+
     # Search post 
-    path('search/', views.search_posts, name='search_posts')
+    path('search/', views.search_posts, name='search_posts'),
+
+    # Recent, Hot, dan Bookmark Threadd
+    path('recent/', views.recent_threads, name='recent_threads'),
+    path('hot/', views.hot_threads, name='hot_threads'),
+    path('bookmarks/', views.bookmarked_threads, name='bookmarked_threads'),
 ]
