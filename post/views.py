@@ -8,7 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
 from django.contrib.auth import get_user_model
-from .models import Post, PostInteraction
+from django.core.exceptions import ValidationError
+from .models import Post, PostInteraction, PostSave
 from comment.models import Comment
 from report.models import Report
 from django.contrib.auth.decorators import login_required
@@ -177,20 +178,35 @@ class PostAPIView(View):
                     status=401,
                 )
 
-            # Handle FormData
-            if request.content_type == "multipart/form-data":
+            # Handle FormData (check for multipart or if FILES exist)
+            if request.FILES or (
+                hasattr(request, "content_type")
+                and request.content_type
+                and "multipart/form-data" in request.content_type
+            ):
                 # Parse JSON data from FormData
                 data_str = request.POST.get("data", "{}")
                 try:
                     data = json.loads(data_str)
                 except json.JSONDecodeError:
-                    data = {}
+                    # If no JSON data, try to get individual fields
+                    data = {
+                        "title": request.POST.get("title", ""),
+                        "content": request.POST.get("content", ""),
+                        "video_link": request.POST.get("video_link", ""),
+                    }
 
                 # Get file
                 image_file = request.FILES.get("image")
             else:
                 # Handle regular JSON
-                data = json.loads(request.body)
+                try:
+                    data = json.loads(request.body)
+                except json.JSONDecodeError:
+                    return JsonResponse(
+                        {"status": "error", "message": "Invalid JSON format"},
+                        status=400,
+                    )
                 image_file = None
 
             # Validasi required fields
@@ -260,7 +276,15 @@ class PostAPIView(View):
             return JsonResponse(
                 {"status": "error", "message": "Invalid JSON format"}, status=400
             )
+        except ValidationError as e:
+            return JsonResponse(
+                {"status": "error", "message": f"Validation error: {str(e)}"},
+                status=400,
+            )
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()  # Print full error to console for debugging
             return JsonResponse(
                 {"status": "error", "message": f"Error creating post: {str(e)}"},
                 status=500,

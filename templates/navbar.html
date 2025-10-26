@@ -1,5 +1,5 @@
 {% load static %}
-<nav class="bg-white shadow-sm w-full fixed top-0 left-0 z-50 flex items-center justify-between px-4 py-2">
+<nav class="bg-white shadow-sm w-screen fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-2">
   <!-- Left: Menu icon -->
   <button id="menu-btn"
           class="p-2 hover:bg-gray-100 rounded-full"
@@ -29,7 +29,7 @@
     </div>
   </div>
   <!-- Right Section -->
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-3 inset-y-0 right-0">
     {% if user.is_authenticated %}
       <!-- Tombol Create Post menggunakan -->
       <a href="{% url 'create_forum_post' %}"
