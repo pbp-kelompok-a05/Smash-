@@ -260,6 +260,11 @@
         });
         const data = await res.json();
         if (data.status === 'success') {
+          if (data.action === 'removed') {
+            // Saat undo (hapus bookmark), reload supaya kartu hilang dari daftar bookmark
+            window.location.reload();
+            return;
+          }
           const isSaved = data.action === 'saved';
           const svg = saveBtn.querySelector('svg');
           saveBtn.classList.toggle('text-green-600', isSaved);
