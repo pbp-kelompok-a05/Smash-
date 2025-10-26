@@ -110,7 +110,33 @@
           </div>
         </div>
 
-        <div id="posts-list"></div>
+        <section class="max-w-4xl mx-auto" id="posts-container">
+            {% if posts %}
+                {% for p in posts %}
+                    <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
+                        <header class="px-6 py-4 flex items-start gap-4">
+                            <img src="{% static 'images/user-profile.png' %}" alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-semibold text-gray-900">{{ p.user.username }}</h3>
+                                    <span class="text-xs text-gray-400">{{ p.created_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <h2 class="text-lg font-bold text-gray-900 mt-1">{{ p.title }}</h2>
+                            </div>
+                        </header>
+                        <div class="px-6 pb-6 text-gray-700">
+                            {{ p.content|linebreaksbr|truncatechars:240 }}
+                        </div>
+                    </article>
+                {% endfor %}
+            {% else %}
+            <!-- Placeholder while JS fetch loads -->
+            <div id="loading-posts" class="text-center py-12">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-500">Loading posts...</p>
+            </div>
+            {% endif %}
+        </section>
         <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center">
           <svg class="animate-spin h-8 w-8 text-green-600 inline-block" xmlns="http://www.w3.org/2000/svg " fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -206,20 +232,38 @@
   document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
   document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
 
-  function handleLogout() {
-    if (!confirm('Are you sure you want to logout?')) return;
-    fetch('/account/logout/ajax/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken,
-        'X-Requested-With': 'XMLHttpRequest'
+      // Logout function
+      function handleLogout() {
+        console.log('Logout function called');
+        if (confirm('Are you sure you want to logout?')) {
+          console.log('User confirmed logout');
+          fetch('/account/logout/ajax/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken,
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => {
+            console.log('Logout response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Logout response data:', data);
+            if (data.success) {
+              console.log('Redirecting to:', data.redirect_url);
+              window.location.href = data.redirect_url;
+            } else {
+              alert('Logout failed. Please try again.');
+            }
+          })
+          .catch(error => {
+            console.error('Logout error:', error);
+            alert('Logout failed: ' + error.message);
+          });
+        }
       }
-    })
-    .then(r => r.json())
-    .then(d => { if (d.success) window.location.href = d.redirect_url; })
-    .catch(() => alert('Logout failed.'));
-  }
 
   // Modal behaviour (create & image)
   const modal = document.getElementById('create-post-modal');
@@ -344,103 +388,758 @@
   }
 
   function createPostCard(post) {
-    const title = post.title;
-    const content = post.content;
-    const image = post.image || '';
-    const createdAt = new Date(post.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-    const authorName = post.user || 'Anonymous';
-
-    return `
-      <div class="post-card bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden w-full mb-6" data-post-id="${post.id}">
-        <div class="flex items-start p-5 pb-0">
-          <img src="https://placehold.co/40x40" alt="avatar" class="w-10 h-10 rounded-full object-cover mr-3">
-          <div class="flex-1">
-            <p class="text-sm font-bold text-gray-800">${authorName}</p>
-            <div class="flex items-center space-x-2 text-sm text-gray-500">
-              <span class="text-blue-500 font-semibold">@${authorName}</span>
-              <span>• ${createdAt}</span>
+        console.log('Creating card for post:', post);
+        // Check if user is authenticated
+        const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+        post.is_authenticated = isAuthenticated;
+        
+        const editButtons = post.can_edit ? `
+            <div class="flex items-center gap-2 ml-auto">
+                <button class="edit-post-btn text-xs text-blue-600 hover:text-blue-800" data-post-id="${post.id}">
+                    Edit
+                </button>
+                <button class="delete-post-btn text-xs text-red-600 hover:text-red-800" data-post-id="${post.id}">
+                    Delete
+                </button>
             </div>
-          </div>
-        </div>
-        <div class="p-5">
-          <h2 class="text-lg font-bold text-gray-900 mb-2">${title}</h2>
-          <p class="text-gray-700 leading-relaxed mb-4">${content.substring(0, 200)}</p>
-          ${image ? `<img src="${image}" alt="${title}" class="rounded-xl w-full object-cover mb-4">` : ''}
-          <hr class="border-gray-100 mb-3">
-          <div class="flex justify-between text-gray-600 text-sm">
-            <div class="flex space-x-6">
-              <button class="like-btn flex items-center hover:text-blue-600">
-                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                </svg>Like
-              </button>
-              <button class="comment-btn flex items-center hover:text-blue-500">
-                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z" />
-                </svg>Comment
-              </button>
-              <button class="save-btn flex items-center hover:text-yellow-500">
-                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.25 3H6.75A1.5 1.5 0 005.25 4.5v15a.75.75 0 001.21.59L12 16.5l5.54 3.59a.75.75 0 001.21-.59v-15A1.5 1.5 0 0017.25 3z" />
-                </svg>Save
-              </button>
+        ` : '';
+
+        const imageSection = post.image ? `
+            <div class="px-6 pb-4">
+                <img src="${post.image}" alt="Post image" class="w-full rounded-lg object-cover max-h-96 cursor-pointer post-image" onclick="openImageModal('${post.image}')" />
             </div>
-            <button class="share-btn flex items-center hover:text-blue-500">
-              <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/>
-                <line x1="8" y1="12" x2="16" y2="7"/><line x1="8" y1="12" x2="16" y2="17"/>
-              </svg>Share
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
+        ` : '';
 
-  function renderAllPostCards(postItems) {
-    postContainer.innerHTML = '';
-    postItems.forEach(postItem => {
-      const cardHtml = createPostCard(postItem);
-      postContainer.insertAdjacentHTML('beforeend', cardHtml);
-    });
-  }
-
-  function filterAndDisplayPost() {
-    updateFilterButtonsAppearance();
-    let filteredPost;
-    if (activeFilter === 'my') filteredPost = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
-    else if (activeFilter === 'bookmark') filteredPost = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
-    else if (activeFilter === 'liked') filteredPost = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
-
-    if (filteredPost.length === 0) displayPageSection({ showEmpty: true });
-    else renderAllPostCards(filteredPost);
-  }
-
-  async function loadPosts() {
-    try {
-      displayPageSection({ showLoading: true });
-      const response = await fetch('/post/api/posts/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken
+        let videoSection = '';
+        if (post.video_link) {
+            // Extract video information
+            let videoThumbnail = '';
+            let videoTitle = post.video_link;
+            let videoId = '';
+            
+            if (post.video_link.includes('youtube.com') || post.video_link.includes('youtu.be')) {
+                // Extract YouTube video ID
+                if (post.video_link.includes('youtu.be/')) {
+                    videoId = post.video_link.split('youtu.be/')[1].split('?')[0].split('&')[0];
+                } else if (post.video_link.includes('youtube.com/watch')) {
+                    const urlParams = new URLSearchParams(post.video_link.split('?')[1]);
+                    videoId = urlParams.get('v');
+                } else if (post.video_link.includes('youtube.com/embed/')) {
+                    videoId = post.video_link.split('youtube.com/embed/')[1].split('?')[0].split('&')[0];
+                }
+                
+                if (videoId) {
+                    videoThumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+                    videoTitle = 'YouTube Video';
+                }
+            }
+            
+            // Create clickable video card
+            videoSection = `
+                <div class="px-6 pb-4">
+                    <a href="${post.video_link}" target="_blank" rel="noopener noreferrer" class="block bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl overflow-hidden border border-gray-200 hover:border-purple-400 hover:shadow-lg transition-all duration-200 group">
+                        ${videoThumbnail ? `
+                        <div class="relative aspect-video bg-gray-200 overflow-hidden">
+                            <img src="${videoThumbnail}" alt="Video thumbnail" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full bg-gray-300\\'><svg class=\\'w-16 h-16 text-gray-400\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z\\'></path><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M21 12a9 9 0 11-18 0 9 9 0 0118 0z\\'></path></svg></div>'">
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 flex items-center justify-center">
+                                <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                                    <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        ` : `
+                        <div class="aspect-video bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                            <svg class="w-20 h-20 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        `}
+                        <div class="p-4">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-gray-900 group-hover:text-purple-700 transition-colors mb-1">${escapeHtml(videoTitle)}</p>
+                                    <p class="text-xs text-gray-500 truncate" title="${escapeHtml(post.video_link)}">${escapeHtml(post.video_link)}</p>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                            </svg>
+                                            Open Video
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            `;
         }
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
-      allPostData = data.posts || [];
-      filterAndDisplayPost();
-    } catch (error) {
-      console.error('Error loading posts:', error);
-      displayPageSection({ showError: true });
-    }finally {
-    displayPageSection({ showLoading: false });
-    }
-  }
 
-  function handleShowMyPostClick() { activeFilter = 'my'; filterAndDisplayPost(); }
-  function handleShowMyBookmarkClick() { activeFilter = 'bookmark'; filterAndDisplayPost(); }
-  function handleShowMyLikeClick() { activeFilter = 'liked'; filterAndDisplayPost(); }
+        return `
+            <div class="post-card" data-post-id="${post.id}">
+                <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
+                    <header class="px-6 py-4 flex items-start gap-4">
+                        <img src="{% static 'images/user-profile.png' %}" alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold text-lg text-gray-900">${escapeHtml(post.title)}</h3>
+                                <span class="text-xs text-gray-500">• ${escapeHtml(post.user)}</span>
+                                <span class="text-xs text-gray-400">| ${formatDate(post.created_at)}</span>
+                                ${editButtons}
+                            </div>
+                            
+                            <div class="post-content mt-2">
+                                <p class="text-gray-700 leading-relaxed">
+                                    ${escapeHtml(post.content).replace(/\n/g, '<br>')}
+                                </p>
+                            </div>
+                        </div>
+                    </header>
+
+                    ${imageSection}
+                    ${videoSection}
+
+                    <footer class="px-6 py-4 border-t border-gray-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-6 text-gray-600 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium post-likes-count">${post.likes_count || 0}</span>
+                                    <span>likes</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium post-dislikes-count">${post.dislikes_count || 0}</span>
+                                    <span>dislikes</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium">${post.comment_count || 0}</span>
+                                    <span>comments</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between border-t border-gray-100 pt-3">
+                            <div class="flex items-center gap-6">
+                                <button class="like-btn flex items-center gap-2 ${post.user_interaction === 'like' ? 'text-pink-600' : 'text-gray-600'} hover:text-pink-600 transition-colors text-sm" data-post-id="${post.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 like-icon ${post.user_interaction === 'like' ? 'fill-pink-600' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                    </svg>
+                                    <span class="like-text">${post.user_interaction === 'like' ? 'Liked' : 'Like'}</span>
+                                </button>
+
+                                <button class="dislike-btn flex items-center gap-2 ${post.user_interaction === 'dislike' ? 'text-red-600' : 'text-gray-600'} hover:text-red-600 transition-colors text-sm" data-post-id="${post.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 dislike-icon ${post.user_interaction === 'dislike' ? 'fill-red-600' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                                    </svg>
+                                    <span class="dislike-text">${post.user_interaction === 'dislike' ? 'Disliked' : 'Dislike'}</span>
+                                </button>
+
+                                <button class="comment-btn flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors text-sm" data-post-id="${post.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z" />
+                                    </svg>
+                                    Comment
+                                </button>
+
+                                <button class="save-btn flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors text-sm" data-post-id="${post.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v16l7-5 7 5V3z" />
+                                    </svg>
+                                    Save
+                                </button>
+                            </div>
+
+                            <button class="share-btn flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors text-sm" data-post-id="${post.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 6l-4-4-4 4" />
+                                </svg>
+                                Share
+                            </button>
+                        </div>
+
+                        <div class="comments-section mt-4 hidden" id="comments-${post.id}">
+                            ${post.is_authenticated ? `
+                            <div class="mb-4 pb-4 border-b border-gray-100">
+                                <form class="add-comment-form" data-post-id="${post.id}">
+                                    <div class="flex gap-3 items-start">
+                                        <img src="{% static 'images/user-profile.png' %}" alt="Your avatar" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                        <div class="flex-1 flex flex-col gap-2">
+                                            <textarea placeholder="Write a comment..." class="comment-input flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none" rows="2" required></textarea>
+                                            <div class="flex justify-end">
+                                                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center gap-2">
+                                                    <span>Post Comment</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="space-y-3 comments-list" data-post-id="${post.id}">
+                                <div class="loading-comments text-center py-4">
+                                    <div class="loading-spinner mx-auto mb-2"></div>
+                                    <p class="text-gray-500 text-sm">Loading comments...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+                </article>
+            </div>
+        `;
+    }
+          function initializeCommentInteractions() {
+          // Like comment
+          document.querySelectorAll('.comment-like-btn').forEach(btn => {
+              btn.addEventListener('click', async function() {
+                  const commentId = this.dataset.commentId;
+                  const commentItem = this.closest('.comment-item');
+                  const likesCount = commentItem.querySelector('.comment-likes-count');
+                  const dislikesCount = commentItem.querySelector('.comment-dislikes-count');
+                  const likeIcon = this.querySelector('.comment-like-icon');
+                  const dislikeBtn = commentItem.querySelector('.comment-dislike-btn');
+                  const dislikeIcon = dislikeBtn.querySelector('.comment-dislike-icon');
+
+                  try {
+                      const response = await fetch(`/comments/${commentId}/like/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                      });
+
+                      const data = await response.json();
+                      
+                      if (data.status === 'success') {
+                          likesCount.textContent = data.likes_count;
+                          dislikesCount.textContent = data.dislikes_count;
+                          
+                          // Update button states
+                          if (data.action === 'liked') {
+                              this.classList.add('text-pink-600');
+                              this.classList.remove('text-gray-600');
+                              likeIcon.classList.add('fill-pink-600');
+                              // Remove dislike if active
+                              dislikeBtn.classList.remove('text-red-600');
+                              dislikeBtn.classList.add('text-gray-600');
+                              dislikeIcon.classList.remove('fill-red-600');
+                          } else {
+                              this.classList.remove('text-pink-600');
+                              this.classList.add('text-gray-600');
+                              likeIcon.classList.remove('fill-pink-600');
+                          }
+                      }
+                  } catch (error) {
+                      console.error('Error liking comment:', error);
+                  }
+              });
+          });
+
+          // Dislike comment
+          document.querySelectorAll('.comment-dislike-btn').forEach(btn => {
+              btn.addEventListener('click', async function() {
+                  const commentId = this.dataset.commentId;
+                  const commentItem = this.closest('.comment-item');
+                  const likesCount = commentItem.querySelector('.comment-likes-count');
+                  const dislikesCount = commentItem.querySelector('.comment-dislikes-count');
+                  const dislikeIcon = this.querySelector('.comment-dislike-icon');
+                  const likeBtn = commentItem.querySelector('.comment-like-btn');
+                  const likeIcon = likeBtn.querySelector('.comment-like-icon');
+
+                  try {
+                      const response = await fetch(`/comments/${commentId}/dislike/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                      });
+
+                      const data = await response.json();
+                      
+                      if (data.status === 'success') {
+                          likesCount.textContent = data.likes_count;
+                          dislikesCount.textContent = data.dislikes_count;
+                          
+                          // Update button states
+                          if (data.action === 'disliked') {
+                              this.classList.add('text-red-600');
+                              this.classList.remove('text-gray-600');
+                              dislikeIcon.classList.add('fill-red-600');
+                              // Remove like if active
+                              likeBtn.classList.remove('text-pink-600');
+                              likeBtn.classList.add('text-gray-600');
+                              likeIcon.classList.remove('fill-pink-600');
+                          } else {
+                              this.classList.remove('text-red-600');
+                              this.classList.add('text-gray-600');
+                              dislikeIcon.classList.remove('fill-red-600');
+                          }
+                      }
+                  } catch (error) {
+                      console.error('Error disliking comment:', error);
+                  }
+              });
+          });
+
+          // Delete comment
+          document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+              btn.addEventListener('click', async function() {
+                  if (!confirm('Are you sure you want to delete this comment?')) return;
+
+                  const commentId = this.dataset.commentId;
+                  const commentItem = this.closest('.comment-item');
+
+                  try {
+                      const response = await fetch(`/comments/${commentId}/`, {
+                          method: 'DELETE',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                      });
+
+                      const data = await response.json();
+                      
+                      if (data.status === 'success') {
+                          commentItem.remove();
+                      } else {
+                          alert('Error deleting comment: ' + data.message);
+                      }
+                  } catch (error) {
+                      console.error('Error deleting comment:', error);
+                      alert('Error deleting comment. Please try again.');
+                  }
+              });
+          });
+      }
+  function toggleDislikeButtonView(dislikeBtn, isActive) {
+      const dislikeIcon = dislikeBtn.querySelector('.dislike-icon');
+      const dislikeText = dislikeBtn.querySelector('.dislike-text');
+      
+      if (isActive) {
+          dislikeBtn.classList.add('text-red-600');
+          dislikeBtn.classList.remove('text-gray-600');
+          dislikeIcon.classList.add('fill-red-600');
+          dislikeText.textContent = 'Disliked';
+      } else {
+          dislikeBtn.classList.remove('text-red-600');
+          dislikeBtn.classList.add('text-gray-600');
+          dislikeIcon.classList.remove('fill-red-600');
+          dislikeText.textContent = 'Dislike';
+      }
+  }
+        function initializePostInteractions() {
+          // Like functionality
+          document.querySelectorAll('.like-btn').forEach(btn => {
+              btn.addEventListener('click', async function() {
+                  const postId = this.dataset.postId;
+                  const footer = this.closest('footer');
+                  const likesCount = footer.querySelector('.post-likes-count');
+                  const dislikesCount = footer.querySelector('.post-dislikes-count');
+                  const buttonContainer = this.parentElement;
+                  const dislikeBtn = buttonContainer.querySelector('.dislike-btn');
+                  
+                  try {
+                      // Call backend API
+                      const response = await fetch(`/post/api/posts/${postId}/like/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                      });
+
+                      const data = await response.json();
+                      
+                      if (data.status === 'success') {
+                          // Update counts from server
+                          likesCount.textContent = data.likes_count;
+                          dislikesCount.textContent = data.dislikes_count;
+                          
+                          // Update button views based on current state
+                          toggleLikeButtonView(this, data.user_interaction === 'like');
+                          toggleDislikeButtonView(dislikeBtn, false);
+                      }
+                  } catch (error) {
+                      console.error('Error liking post:', error);
+                  }
+              });
+          });
+
+          // Dislike functionality
+          document.querySelectorAll('.dislike-btn').forEach(btn => {
+              btn.addEventListener('click', async function() {
+                  const postId = this.dataset.postId;
+                  const footer = this.closest('footer');
+                  const likesCount = footer.querySelector('.post-likes-count');
+                  const dislikesCount = footer.querySelector('.post-dislikes-count');
+                  const buttonContainer = this.parentElement;
+                  const likeBtn = buttonContainer.querySelector('.like-btn');
+                  
+                  try {
+                      // Call backend API
+                      const response = await fetch(`/post/api/posts/${postId}/dislike/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                      });
+
+                      const data = await response.json();
+                      
+                      if (data.status === 'success') {
+                          // Update counts from server
+                          likesCount.textContent = data.likes_count;
+                          dislikesCount.textContent = data.dislikes_count;
+                          
+                          // Update button views based on current state
+                          toggleDislikeButtonView(this, data.user_interaction === 'dislike');
+                          toggleLikeButtonView(likeBtn, false);
+                      }
+                  } catch (error) {
+                      console.error('Error disliking post:', error);
+                  }
+              });
+          });
+
+          // Edit button functionality
+          document.querySelectorAll('.edit-post-btn').forEach(btn => {
+              btn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  const postId = this.dataset.postId;
+                  editPost(postId);
+              });
+          });
+
+
+          // Delete button functionality
+          document.querySelectorAll('.delete-post-btn').forEach(btn => {
+              btn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  const postId = this.dataset.postId;
+                  deletePost(postId);
+              });
+          });
+          // Comment toggle
+          document.querySelectorAll('.comment-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  const postId = this.dataset.postId;
+                  const commentsSection = document.getElementById(`comments-${postId}`);
+                  if (commentsSection) {
+                      const wasHidden = commentsSection.classList.contains('hidden');
+                      commentsSection.classList.toggle('hidden');
+                      
+                      // Load comments when opening the section for the first time
+                      if (wasHidden && commentsSection.querySelector('.loading-comments')) {
+                          loadComments(postId);
+                      }
+                  }
+              });
+          });
+
+          // Add comment form submission
+          document.querySelectorAll('.add-comment-form').forEach(form => {
+              form.addEventListener('submit', async function(e) {
+                  e.preventDefault();
+                  
+                  const postId = this.dataset.postId;
+                  const textarea = this.querySelector('.comment-input');
+                  const content = textarea.value.trim();
+                  
+                  if (!content) return;
+                  
+                  const submitBtn = this.querySelector('button[type="submit"]');
+                  const originalText = submitBtn.innerHTML;
+                  submitBtn.disabled = true;
+                  submitBtn.innerHTML = '<span>Posting...</span>';
+                  
+                  try {
+                      const response = await fetch(`/comments/post/${postId}/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                          body: JSON.stringify({ content: content })
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (data.status === 'success') {
+                          textarea.value = '';
+                          // Reload comments
+                          loadComments(postId);
+                      } else {
+                          console.error('Server error:', data);
+                          alert('Error posting comment: ' + (data.message || 'Unknown error'));
+                      }
+                  } catch (error) {
+                      console.error('Error posting comment:', error);
+                      alert('Error posting comment: ' + error.message);
+                  } finally {
+                      submitBtn.disabled = false;
+                      submitBtn.innerHTML = originalText;
+                  }
+              });
+          });
+
+          // Save functionality
+          document.querySelectorAll('.save-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  this.classList.toggle('text-green-600');
+                  const svg = this.querySelector('svg');
+                  if (this.classList.contains('text-green-600')) {
+                      svg.classList.add('fill-green-600');
+                  } else {
+                      svg.classList.remove('fill-green-600');
+                  }
+              });
+          });
+
+          // Share functionality
+          document.querySelectorAll('.share-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  const postId = this.dataset.postId;
+                  
+                  // Simple share implementation
+                  if (navigator.share) {
+                      navigator.share({
+                          title: 'Check out this post on Smash!',
+                          url: window.location.href + `?post=${postId}`
+                      });
+                  } else {
+                      alert('Post shared! (Copy link to share manually)');
+                  }
+              });
+          });
+
+          // Image modal functionality
+          initializeImageModal();
+      }
+        function initializeImageModal() {
+          const modal = document.getElementById('image-modal');
+          const modalImage = document.getElementById('modal-image');
+          const closeBtn = document.getElementById('close-image-modal');
+
+          if (!modal || !modalImage || !closeBtn) return;
+
+          window.openImageModal = function(imageSrc) {
+              modalImage.src = imageSrc;
+              modal.classList.remove('hidden');
+              document.body.style.overflow = 'hidden';
+          };
+
+          closeBtn.addEventListener('click', function() {
+              modal.classList.add('hidden');
+              document.body.style.overflow = 'auto';
+          });
+
+          modal.addEventListener('click', function(e) {
+              if (e.target === modal) {
+                  modal.classList.add('hidden');
+                  document.body.style.overflow = 'auto';
+              }
+          });
+      }
+        function showNoPostsMessage(container) {
+          if (!container) return;
+          container.innerHTML = `
+              <div class="text-center py-12">
+                  <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" alt="No posts" class="mx-auto w-64 h-64 object-cover rounded-lg">
+                  <p class="mt-4 text-gray-500 text-lg">No posts yet</p>
+                  <p class="text-gray-400 text-sm">Be the first to create a post!</p>
+              </div>
+          `;
+      }
+      async function loadComments(postId) {
+          const commentsList = document.querySelector(`.comments-list[data-post-id="${postId}"]`);
+          if (!commentsList) return;
+
+          try {
+              const response = await fetch(`/comments/post/${postId}/`, {
+                  method: 'GET',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken': csrftoken,
+                  }
+              });
+
+              const data = await response.json();
+              
+              // Remove loading indicator
+              const loadingDiv = commentsList.querySelector('.loading-comments');
+              if (loadingDiv) loadingDiv.remove();
+
+              if (data.status === 'success' && data.comments && data.comments.length > 0) {
+                  commentsList.innerHTML = data.comments.map(comment => createCommentHTML(comment)).join('');
+                  initializeCommentInteractions();
+              } else {
+                  commentsList.innerHTML = `
+                      <div class="text-center py-6 text-gray-500 text-sm bg-white rounded-lg">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <p class="font-medium">No comments yet</p>
+                          <p class="text-xs text-gray-400 mt-1">Be the first to comment!</p>
+                      </div>
+                  `;
+              }
+          } catch (error) {
+              console.error('Error loading comments:', error);
+              commentsList.innerHTML = `
+                  <div class="text-center py-4 text-red-500 text-sm">
+                      Error loading comments. Please try again.
+                  </div>
+              `;
+          }
+      }
+      function createCommentHTML(comment) {
+          const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+          const currentUserId = {{ user.id|default:"null" }};
+          const canEdit = isAuthenticated && (comment.user_id === currentUserId);
+          
+          const isLiked = comment.user_interaction === 'like';
+          const isDisliked = comment.user_interaction === 'dislike';
+
+          return `
+              <div class="comment-item bg-gray-50 rounded-lg p-4" data-comment-id="${comment.id}">
+                  <div class="flex gap-3">
+                      <img src="{% static 'images/user-profile.png' %}" alt="${escapeHtml(comment.user)}" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      <div class="flex-1">
+                          <div class="flex items-center gap-2 mb-1">
+                              <span class="font-semibold text-sm text-gray-900">${escapeHtml(comment.user)}</span>
+                              <span class="text-xs text-gray-400">${formatDate(comment.created_at)}</span>
+                              ${canEdit ? `
+                              <button class="delete-comment-btn text-xs text-red-600 hover:text-red-800 ml-auto" data-comment-id="${comment.id}">
+                                  Delete
+                              </button>
+                              ` : ''}
+                          </div>
+                          <p class="text-sm text-gray-700 mb-2">${escapeHtml(comment.content).replace(/\n/g, '<br>')}</p>
+                          ${isAuthenticated ? `
+                          <div class="flex items-center gap-4">
+                              <button class="comment-like-btn flex items-center gap-1 text-xs ${isLiked ? 'text-pink-600' : 'text-gray-600'} hover:text-pink-600 transition-colors" data-comment-id="${comment.id}">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 comment-like-icon ${isLiked ? 'fill-pink-600' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                  </svg>
+                                  <span class="comment-likes-count">${comment.likes_count || 0}</span>
+                              </button>
+                              <button class="comment-dislike-btn flex items-center gap-1 text-xs ${isDisliked ? 'text-red-600' : 'text-gray-600'} hover:text-red-600 transition-colors" data-comment-id="${comment.id}">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 comment-dislike-icon ${isDisliked ? 'fill-red-600' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                                  </svg>
+                                  <span class="comment-dislikes-count">${comment.dislikes_count || 0}</span>
+                              </button>
+                          </div>
+                          ` : `
+                          <div class="flex items-center gap-4 text-xs text-gray-600">
+                              <span>${comment.likes_count || 0} likes</span>
+                              <span>${comment.dislikes_count || 0} dislikes</span>
+                          </div>
+                          `}
+                      </div>
+                  </div>
+              </div>
+          `;
+      }
+      function showErrorState(container) {
+          if (!container) return;
+          const loading = document.getElementById('loading-posts');
+          if (loading) loading.remove();
+          
+          container.innerHTML = `
+              <div class="text-center py-12">
+                  <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" alt="Error" class="mx-auto w-64 h-64 object-cover rounded-lg">
+                  <p class="mt-4 text-gray-500 text-lg">Error loading posts</p>
+                  <p class="text-gray-400 text-sm">Please try again later</p>
+                  <button onclick="loadPosts()" class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                      Retry
+                  </button>
+              </div>
+          `;
+      }
+  function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g , "&lt;") .replace( />/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+        function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+      }
+  async function loadPosts() {
+        console.log('Loading posts...');
+        try {
+          const response = await fetch('/post/api/posts/', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken
+            }
+          });
+          console.log('Response status:', response.status);
+          if (!response.ok) throw new Error('Network response was not ok');
+
+          const data = await response.json();
+          allPostData = data.posts || [];
+          updateFilterButtonsAppearance();
+          if (activeFilter === 'my') allPostData = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
+          else if (activeFilter === 'bookmark') allPostData = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
+          else if (activeFilter === 'liked') allPostData = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
+          if (allPostData.length === 0) displayPageSection({ showEmpty: true });
+          console.log('Posts data received:', data);
+          const container = document.getElementById('posts-container');
+          const loading = document.getElementById('loading-posts');
+          if (loading) loading.remove();
+
+          if (data.status === 'success' && Array.isArray(data.posts) && data.posts.length > 0) {
+            // Render posts directly without ads
+            container.innerHTML = data.posts.map(post => createPostCard(post)).join('');
+            initializePostInteractions();
+          } else {
+            console.log('No posts found');
+            showNoPostsMessage(container);
+          }
+        } catch (error) {
+          console.error('Error loading posts:', error);
+          showErrorState(document.getElementById('posts-container'));
+        }finally {
+      displayPageSection({ showLoading: false });
+      }
+      }
+
+  function handleShowMyPostClick() { activeFilter = 'my'; loadPosts() }
+  function handleShowMyBookmarkClick() { activeFilter = 'bookmark'; loadPosts(); }
+  function handleShowMyLikeClick() { activeFilter = 'liked'; loadPosts(); }
 
   function initializePostPage() {
     showMyPostButton?.addEventListener('click', handleShowMyPostClick);
@@ -448,7 +1147,117 @@
     showMyLikesButton?.addEventListener('click', handleShowMyLikeClick);
     loadPosts();
   }
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing...');
+    // Load posts when page loads
+    loadPosts();
 
+    // Add logout event listeners
+    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+    document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
+  });
+
+  // Edit post function
+  function editPost(postId) {
+      console.log('Editing post:', postId);
+      window.location.href = `/post/edit/${postId}/`;
+  }
+  // Delete post function
+  function deletePost(postId) {
+      if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+          fetch(`/post/api/posts/${postId}/`, {
+              method: 'DELETE',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrftoken,
+              }
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.status === 'success') {
+                  alert('Post deleted successfully!');
+                  loadPosts(); // Reload posts
+              } else {
+                  alert('Error deleting post: ' + data.message);
+              }
+          })
+          .catch(error => {
+              console.error('Error deleting post:', error);
+              alert('Error deleting post. Please try again.');
+          });
+      }
+  }
   initializePostPage();
 </script>
+<script>
+    // Popup Ads logic (randomized)
+    (function initPopupAds(){
+      try {
+        // Throttle: don't show more than once per 10 minutes
+        const THROTTLE_MS = 10 * 60 * 1000;
+        const lastShown = Number(localStorage.getItem('smash_popup_last_shown') || 0);
+        if (Date.now() - lastShown < THROTTLE_MS) return;
+
+        // Build and attach popup DOM
+        function renderPopup(ad){
+          if (!ad || !ad.image) return;
+          const existing = document.getElementById('popup-ads');
+          if (existing) existing.remove();
+
+          const overlay = document.createElement('div');
+          overlay.id = 'popup-ads';
+          overlay.className = 'hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'relative';
+
+          const closeBtn = document.createElement('button');
+          closeBtn.id = 'close-ads';
+          closeBtn.setAttribute('aria-label','Close');
+          closeBtn.className = 'absolute -top-3 -right-3 bg-white rounded-full shadow text-gray-600 w-8 h-8 flex items-center justify-center hover:bg-gray-100';
+          closeBtn.innerHTML = '&times;';
+
+          const img = document.createElement('img');
+          img.src = ad.image;
+          img.alt = ad.title || 'Advertisement';
+          img.className = 'w-80 sm:w-96 object-cover shadow-lg rounded-lg';
+
+          if (ad.link) {
+            const a = document.createElement('a');
+            a.href = `/ads/r/${ad.id}/`;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.appendChild(img);
+            wrapper.appendChild(a);
+          } else {
+            wrapper.appendChild(img);
+          }
+
+          wrapper.appendChild(closeBtn);
+          overlay.appendChild(wrapper);
+          document.body.appendChild(overlay);
+
+          function hide(){ overlay.classList.add('hidden'); localStorage.setItem('smash_popup_last_shown', String(Date.now())); }
+          closeBtn.addEventListener('click', hide);
+          overlay.addEventListener('click', (e) => { if (e.target === overlay) hide(); });
+
+          const delaySec = Number(ad.popup_delay_seconds || 0);
+          const delay = delaySec > 0 ? delaySec * 1000 : (3000 + Math.floor(Math.random() * 4000)); // 3-7s
+          setTimeout(() => overlay.classList.remove('hidden'), delay);
+        }
+
+        // Fetch ads and pick a random active popup ad
+        fetch('/ads/api/')
+          .then(r => r.json())
+          .then(data => {
+            const list = (data && data.ads) ? data.ads : [];
+            const candidates = list.filter(ad => ad.is_active && ad.ad_type === 'popup' && ad.image);
+            if (!candidates.length) return;
+            const randomAd = candidates[Math.floor(Math.random() * candidates.length)];
+            renderPopup(randomAd);
+          })
+          .catch(()=>{});
+      } catch(_) {}
+    })();
+    </script>
 {% endblock content %}
