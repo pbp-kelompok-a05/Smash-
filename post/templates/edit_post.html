@@ -223,7 +223,7 @@ cancelDeleteBtn.addEventListener('click', function() {
 confirmDeleteBtn.addEventListener('click', function() {
     const postId = document.getElementById('edit-post-form').dataset.postId;
     
-    fetch(`/post/${postId}/`, {
+    fetch(`/post/api/posts/${postId}/`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ document.getElementById('edit-post-form').addEventListener('submit', async funct
             formData.append('image', imageFile);
         }
         
-        const response = await fetch(`/post/${postId}/`, {
+        const response = await fetch(`/post/api/posts/${postId}/`, {
             method: 'PUT',
             headers: {
                 'X-CSRFToken': csrftoken,

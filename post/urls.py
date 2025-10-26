@@ -22,6 +22,8 @@ urlpatterns = [
     
     # Halaman Pencarian
     path('search/', views.search_posts, name='search_posts'),
+    # Halaman Edit Post
+    path('edit/<int:post_id>/', views.edit_post_page, name='edit_post_page'),
     
     # Halaman Thread Populer
     path('hot-threads/', views.hot_threads, name='hot_threads'),
