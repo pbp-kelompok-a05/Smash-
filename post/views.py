@@ -557,7 +557,7 @@ def bookmarked_threads(request):
 
 def recent_thread(request):
     posts = Post.objects.filter(is_deleted=False).order_by('-created_at')[:50]
-    return render(request, 'Post/recent_threads.html', {
+    return render(request, 'post/recent_threads.html', {
         'posts': posts,
         'page_title': 'Recent Threads'
     })

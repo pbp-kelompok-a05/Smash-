@@ -1,5 +1,6 @@
 from django.urls import path
 from profil.views import show_views,show_json,edit_or_create_profile
+from . import views
 
 app_name = 'profil'
 
