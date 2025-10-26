@@ -37,7 +37,9 @@
                         <div class="flex items-center gap-3 mb-8">
                             <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">S</div>
                             <div>
-                                <div class="text-xl font-semibold text-purple-800">Smash!</div>
+                                <div class="flex items-center">
+                                    <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="h-8 w-auto">
+                                    </div>
                                 <div class="text-xs text-gray-500">Community • Padel</div>
                             </div>
                         </div>
@@ -114,7 +116,11 @@
                             <div class="flex items-center gap-4">
                                 <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
                                 <div class="hidden lg:flex items-center gap-4">
-                                    <div class="text-2xl font-extrabold text-purple-700">Smash!</div>
+                                    <div class="flex items-center">
+                                        <img src="{% static 'images/logo-smash.png' %}" 
+                                            alt="Smash Logo"
+                                            class="max-h-10 h-auto w-auto object-contain">
+                                        </div>
                                 </div>
                                 <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
                                     <svg xmlns="http://www.w3.org/2000/svg"
