@@ -5,61 +5,30 @@ from . import views
 app_name = 'post'
 
 urlpatterns = [
-    # =============================================
-    # POST CRUD ENDPOINTS
-    # =============================================
+    # =========================================================================
+    # API ENDPOINTS
+    # =========================================================================
     
-    # List semua posts & Create new post
-    path('', views.PostAPIView.as_view(), name='post-list-create'),
+    # CRUD Operations untuk Post
+    path('api/posts/', views.PostAPIView.as_view(), name='post_api'),
+    path('api/posts/<int:post_id>/', views.PostAPIView.as_view(), name='post_api_detail'),
     
-    # Get, Update, Delete specific post
-    path('<int:post_id>/', views.PostAPIView.as_view(), name='post-detail'),
+    # Post Interactions (Like, Dislike, Report, Share)
+    path('api/posts/<int:post_id>/<str:action>/', views.PostInteractionView.as_view(), name='post_interaction'),
     
-    # Post interactions (like, share, report)
-    path('<int:post_id>/<str:action>/', 
-         views.PostInteractionView.as_view(), 
-         name='post-interaction'),
+    # =========================================================================
+    # HTML RENDERED PAGES
+    # =========================================================================
     
-    # =============================================
-    # POST MANAGEMENT ENDPOINTS (Superuser)
-    # =============================================
-    
-    # Admin post management (superuser only)
-    path('admin/posts/', 
-         views.PostAPIView.as_view(), 
-         name='admin-post-list'),
-    
-    path('admin/posts/<int:post_id>/', 
-         views.PostAPIView.as_view(), 
-         name='admin-post-detail'),
-    
-    # =============================================
-    # USER-SPECIFIC POST ENDPOINTS
-    # =============================================
-    
-    # User's own posts
-    path('user/posts/', 
-         views.PostAPIView.as_view(), 
-         name='user-post-list'),
-    
-    # Posts liked by user
-    path('user/liked/', 
-         views.PostAPIView.as_view(), 
-         name='user-liked-posts'),
-    
-    # Posts bookmarked by user  
-    path('user/bookmarked/', 
-         views.PostAPIView.as_view(), 
-         name='user-bookmarked-posts'),
-
-    # Delete and Edit
-    path('<int:post_id>/', views.PostAPIView.as_view(), name='post_detail_api'),
-
-    # Search post 
+    # Halaman Pencarian
     path('search/', views.search_posts, name='search_posts'),
-
-    # Recent, Hot, dan Bookmark Thread
-    path('recent/', views.recent_threads, name='recent_threads'),
-    path('hot/', views.hot_threads, name='hot_threads'),
+    
+    # Halaman Thread Populer
+    path('hot-threads/', views.hot_threads, name='hot_threads'),
+    
+    # Halaman Bookmark (Login Required)
     path('bookmarks/', views.bookmarked_threads, name='bookmarked_threads'),
+    
+    # Halaman Thread Terbaru
+    path('recent-threads/', views.recent_thread, name='recent_threads'),
 ]
