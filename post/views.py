@@ -13,6 +13,8 @@ from .models import Post, PostInteraction, PostSave
 from comment.models import Comment
 from report.models import Report
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import timedelta
 
 User = get_user_model()
 
@@ -32,12 +34,6 @@ class PostAPIView(View):
         is_owner = post and post.user == user if post else False
         is_superuser = user.is_superuser or user.has_perm("post.manage_all_posts")
         return is_owner, is_superuser
-    
-    # TAMBAH FUNGSI UNTUK SEARCH POST
-    def search_posts(request):
-        query = request.GET.get('q', '')
-        posts = Post.objects.filter(content__icontains=query)
-        return render(request, 'post/search_results.html', {'posts': posts, 'query': query})
 
     def get(self, request, post_id=None):
         """
@@ -515,3 +511,46 @@ class PostInteractionView(View):
                 {"status": "error", "message": f"Error processing action: {str(e)}"},
                 status=500,
             )
+
+# TAMBAH FUNGSI UNTUK SEARCH POST
+def search_posts(request):
+    query = request.GET.get('q', '')
+    posts = Post.objects.filter(
+        Q(title__icontains=query) | Q(content__icontains=query),
+        is_deleted=False
+    )
+    return render(request, 'search_results.html', {'posts': posts, 'query': query})
+
+
+def hot_threads(request):
+    """
+    Menampilkan thread terpopuler berdasarkan jumlah like + komentar
+    """
+    posts = (
+        Post.objects.filter(is_deleted=False)
+        .annotate(
+            likes_count=Count('interactions', filter=Q(interactions__interaction_type='like')),
+            comments_count=Count('comments')
+        )
+        .annotate(total_score=Count('interactions', filter=Q(interactions__interaction_type='like')) + Count('comments'))
+        .order_by('-total_score', '-created_at')[:50]
+    )
+
+    return render(request, 'post/hot_threads.html', {
+        'posts': posts,
+        'page_title': 'Hot Threads'
+    })
+
+
+@login_required
+def bookmarked_threads(request):
+    """
+    Menampilkan postingan yang telah disimpan oleh pengguna (bookmark)
+    """
+    saves = PostSave.objects.filter(user=request.user).select_related('post').order_by('-created_at')
+    posts = [s.post for s in saves if not s.post.is_deleted]
+
+    return render(request, 'post/bookmarked_threads.html', {
+        'posts': posts,
+        'page_title': 'Bookmarks'
+    })

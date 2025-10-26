@@ -20,6 +20,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from post import views as post_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -30,6 +31,10 @@ urlpatterns = [
     path("comments/", include("comment.urls")),
     path("reports/", include("report.urls")),
     path("profil/", include("profil.urls")),
+
+    # Routing Sidebar
+    path('hot/', post_views.hot_thread, name='hot_thread'),
+    path('bookmark/', post_views.bookmark, name='bookmark'),
 ]
 
 if settings.DEBUG:

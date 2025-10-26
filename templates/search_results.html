@@ -1,11 +1,10 @@
-{% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
   <div class="container">
     <h2>Hasil pencarian untuk "{{ search_query }}"</h2>
     {% if posts %}
-      {% include "card_view.html" with posts=posts %}
+      {% include "cardview/card_view.html" with posts=posts %}
     {% else %}
       <p>Tidak ada hasil ditemukan.</p>
     {% endif %}

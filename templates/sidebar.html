@@ -1,96 +1,55 @@
 {% extends 'base.html' %}
-<nav class="sidebar" id="sidebar">
-  <!-- THREAD SECTION -->
-  <div class="sidebar-section">
-    <h4 class="sidebar-title">THREAD</h4>
-    <ul>
-      <li class="sidebar-item active">
-        <a href="{% url 'recent_thread' %}">
-          <i class="fas fa-clock"></i>
-          <span>Recent</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="#">
-          <i class="fas fa-tags"></i>
-          <span>For You</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="{% url 'hot_thread' %}">
-          <i class="fas fa-fire"></i>
-          <span>Hot Thread</span>
-        </a>
-      </li>
-    </ul>
-  </div>
+<!-- Sidebar Thread Section -->
+<div class="sidebar-section">
+  <h4 class="sidebar-title">THREAD</h4>
+  <ul>
+    <li class="sidebar-item active">
+      <a href="{% url 'recent_thread' %}">
+        <i class="fas fa-clock"></i><span>Recent</span>
+      </a>
+    </li>
+    <li class="sidebar-item">
+      <a href="{% url 'hot_thread' %}">
+        <i class="fas fa-fire"></i><span>Hot Thread</span>
+      </a>
+    </li>
+  </ul>
+</div>
 
-  <!-- MENU SECTION -->
-  <div class="sidebar-section">
-    <h4 class="sidebar-title">MENU</h4>
-    <ul>
-      <li class="sidebar-item">
-        <a href="#">
-          <i class="fas fa-bell"></i>
-          <span>Notification</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="{% url 'bookmark' %}">
-          <i class="fas fa-bookmark"></i>
-          <span>Bookmark</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="{% url 'profile' user.username %}">
-          <i class="fas fa-user"></i>
-          <span>Profile</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="#">
-          <i class="fas fa-envelope"></i>
-          <span>Message</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="#">
-          <i class="fas fa-users"></i>
-          <span>Communities</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="#">
-          <i class="fas fa-cog"></i>
-          <span>Settings</span>
-        </a>
-      </li>
-    </ul>
-  </div>
+<!-- Sidebar Menu Section -->
+<div class="sidebar-section">
+  <h4 class="sidebar-title">MENU</h4>
+  <ul>
+    <li class="sidebar-item">
+      <a href="{% url 'bookmark' %}">
+        <i class="fas fa-bookmark"></i><span>Bookmark</span>
+      </a>
+    </li>
+    <li class="sidebar-item">
+      <a href="{% url 'profile' user.username %}">
+        <i class="fas fa-user"></i><span>Profile</span>
+      </a>
+    </li>
+  </ul>
+</div>
 
-  <!-- OTHERS SECTION -->
-  <div class="sidebar-section">
-    <h4 class="sidebar-title">OTHERS</h4>
-    <ul>
-      <li class="sidebar-item">
-        <a href="{% url 'about' %}">
-          <i class="fas fa-info-circle"></i>
-          <span>Tentang SMASH</span>
-        </a>
-      </li>
-      <li class="sidebar-item">
-        <a href="{% url 'contact' %}">
-          <i class="fas fa-phone"></i>
-          <span>Hubungi Kami</span>
-        </a>
-      </li>
-    </ul>
-  </div>
+<!-- OTHERS -->
+<div class="sidebar-section">
+  <h4 class="sidebar-title">OTHERS</h4>
+  <ul>
+    <li class="sidebar-item">
+      <a href="{% url 'about' %}">
+        <i class="fas fa-info-circle"></i><span>Tentang SMASH</span>
+      </a>
+    </li>
+    <li class="sidebar-item">
+      <a href="https://wa.me/6282110494911" target="_blank">
+        <i class="fas fa-phone"></i><span>Hubungi Kami</span>
+      </a>
+    </li>
+  </ul>
+</div>
 
-  <div class="sidebar-footer">
-    <p>© 2025 SMASH, PBP Kelompok A05.<br>All rights reserved</p>
-  </div>
-</nav>
 
 <style>
 /* ===== Sidebar Struktur ===== */
