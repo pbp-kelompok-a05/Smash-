@@ -18,6 +18,7 @@ def show_views(request):
         'bio': bio,
     }
     return render(request, "profile_user.html", context)
+
 # Create your views here.
 def edit_or_create_profile(request):
     profile, created = Profile.objects.get_or_create(user=request.user)
