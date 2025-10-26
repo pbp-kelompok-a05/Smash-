@@ -18,7 +18,6 @@ from datetime import timedelta
 
 User = get_user_model()
 
-
 class PostAPIView(View):
     """
     API View untuk handling CRUD operations pada Post.
