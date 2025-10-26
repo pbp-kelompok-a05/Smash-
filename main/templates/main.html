@@ -1604,25 +1604,62 @@ function showNoPostsMessage(container) {
 }
 
 function showErrorState(container) {
-    if (!container) return;
-    const loading = document.getElementById('loading-posts');
-    if (loading) loading.remove();
-    
-    container.innerHTML = `
-        <div class="text-center py-12">
-            <div class="w-64 h-64 mx-auto mb-4 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center">
-                <svg class="w-32 h-32 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+    // Validasi input parameter
+    if (!container || !(container instanceof HTMLElement)) {
+        console.error('Container tidak valid atau tidak ditemukan');
+        return;
+    }
+
+    try {
+        // Hapus loading indicator jika ada
+        const loading = document.getElementById('loading-posts');
+        if (loading) {
+            loading.remove();
+        }
+
+        // Set konten error state
+        container.innerHTML = `
+            <div class="text-center py-12" role="alert" aria-live="polite">
+                <div class="w-64 h-64 mx-auto mb-4 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center" 
+                     aria-hidden="true">
+                    <svg class="w-32 h-32 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                
+                <p class="mt-4 text-gray-500 text-lg font-medium">
+                    Error loading posts
+                </p>
+                
+                <p class="text-gray-400 text-sm mt-1">
+                    Please try again later
+                </p>
+                
+                <button onclick="loadPosts()" 
+                        class="mt-6 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors interactive-btn focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        aria-label="Retry loading posts">
+                    Retry
+                </button>
             </div>
-            <p class="mt-4 text-gray-500 text-lg font-medium">Error loading posts</p>
-            <p class="text-gray-400 text-sm mt-1">Please try again later</p>
-            <button onclick="loadPosts()" 
-                    class="mt-6 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors interactive-btn">
-                Retry
-            </button>
-        </div>
-    `;
+        `;
+
+        // Tambahkan event listener untuk keyboard accessibility
+        const retryButton = container.querySelector('button');
+        if (retryButton) {
+            retryButton.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    loadPosts();
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Error dalam menampilkan state error:', error);
+        // Fallback: tampilkan pesan error sederhana
+        container.textContent = 'Terjadi kesalahan dalam memuat konten. Silakan refresh halaman.';
+    }
 }
 
 // Logout function
