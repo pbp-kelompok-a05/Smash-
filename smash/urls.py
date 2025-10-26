@@ -33,9 +33,9 @@ urlpatterns = [
     path("profil/", include("profil.urls")),
 
     # Routing Sidebar
-    path('hot/', post_views.hot_thread, name='hot_thread'),
-    path('bookmark/', post_views.bookmark, name='bookmark'),
-]
+    path('hot/', post_views.hot_threads, name='hot_threads'),
+    path('bookmark/', post_views.bookmarked_threads, name='bookmarked_threads'),
+    path('recent/', post_views.recent_threads, name='recent_threads'),
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
