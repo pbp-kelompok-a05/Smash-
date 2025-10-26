@@ -1141,9 +1141,9 @@
           const loading = document.getElementById('loading-posts');
           if (loading) loading.remove();
 
-          if (data.status === 'success' && Array.isArray(data.posts) && data.posts.length > 0) {
+          if (data.status === 'success' && Array.isArray(allPostData) && allPostData.length > 0) {
             // Render posts directly without ads
-            container.innerHTML = data.posts.map(post => createPostCard(post)).join('');
+            container.innerHTML = allPostData.map(post => createPostCard(post)).join('');
             initializePostInteractions();
           } else {
             console.log('No posts found');
