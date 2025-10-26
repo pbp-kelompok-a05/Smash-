@@ -1,6 +1,7 @@
 # post/views.py
 import json
 from django.http import JsonResponse
+from django.http.multipartparser import MultiPartParser, MultiPartParserError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -321,17 +322,66 @@ class PostAPIView(View):
                     status=403,
                 )
 
-            data = json.loads(request.body)
+            data = {}
+            image_file = None
 
-            # Update fields
-            update_fields = ["title", "content", "video_link"]
-            for field in update_fields:
-                if field in data:
-                    setattr(post, field, data[field])
+            # Support multipart/form-data for PUT (manual parsing)
+            try:
+                if (
+                    hasattr(request, "content_type")
+                    and request.content_type
+                    and "multipart/form-data" in request.content_type
+                ):
+                    parser = MultiPartParser(
+                        request.META, request, request.upload_handlers, request.encoding
+                    )
+                    data_qd, files = parser.parse()
+                    data = data_qd
+                    image_file = files.get("image")
+                else:
+                    # JSON body fallback
+                    data = json.loads(request.body) if request.body else {}
+            except (MultiPartParserError, json.JSONDecodeError):
+                return JsonResponse(
+                    {"status": "error", "message": "Invalid request format"},
+                    status=400,
+                )
 
-            # Handle image update
-            if request.FILES.get("image"):
-                post.image = request.FILES["image"]
+            # Update fields (accept both QueryDict and dict)
+            for field in ["title", "content", "video_link"]:
+                if field in data and data.get(field) is not None:
+                    setattr(post, field, data.get(field))
+
+            # Handle remove image flag
+            remove_image_val = str(data.get("remove_image", "")).lower()
+            if remove_image_val in ("true", "1", "on", "yes"):
+                post.image = None
+
+            # Handle image update with basic validation
+            if not image_file and hasattr(request, "FILES"):
+                image_file = request.FILES.get("image")
+
+            if image_file:
+                allowed_types = ["image/jpeg", "image/png", "image/gif"]
+                if getattr(image_file, "content_type", "") not in allowed_types:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "message": "File type tidak didukung. Gunakan JPG, PNG, atau GIF.",
+                        },
+                        status=400,
+                    )
+
+                if getattr(image_file, "size", 0) > 5 * 1024 * 1024:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "message": "Ukuran file terlalu besar. Maksimal 5MB.",
+                        },
+                        status=400,
+                    )
+
+                post.image = image_file
 
             post.save()
 
@@ -340,6 +390,14 @@ class PostAPIView(View):
                     "status": "success",
                     "message": "Post berhasil diupdate",
                     "post_id": post.id,
+                    "post": {
+                        "id": post.id,
+                        "title": post.title,
+                        "content": post.content,
+                        "image": post.image.url if post.image else None,
+                        "video_link": post.video_link,
+                        "updated_at": post.updated_at.isoformat(),
+                    },
                 }
             )
 
@@ -396,6 +454,17 @@ class PostAPIView(View):
             )
 
 
+@login_required(login_url='account:login_register')
+def edit_post_page(request, post_id):
+    post = get_object_or_404(Post, id=post_id, is_deleted=False)
+    if not (post.user == request.user or request.user.is_superuser):
+        return redirect('main:home')
+    context = {
+        "post": post,
+        "page_title": "Edit Post",
+    }
+    return render(request, "edit_post.html", context)
+
 class PostInteractionView(View):
     """
     View untuk handling post interactions (like, share, report)
@@ -419,7 +488,11 @@ class PostInteractionView(View):
                     status=401,
                 )
 
-            post = Post.objects.get(id=post_id, is_deleted=False)
+            # Superuser can interact with any post (even if soft-deleted)
+            if request.user.is_superuser or request.user.has_perm("post.manage_all_posts"):
+                post = Post.objects.get(id=post_id)
+            else:
+                post = Post.objects.get(id=post_id, is_deleted=False)
             data = json.loads(request.body) if request.body else {}
 
             if action == "like" or action == "dislike":
