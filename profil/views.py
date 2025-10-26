@@ -39,10 +39,9 @@ def show_json(request):
     post_list = Post.objects.all()
     data = [
         {
-            "author": post.user,
             "title": post.title,
             "content": post.content,
-            "image": post.image,
+            "image": post.image.url if post.image else None,
             "url_vid": post.video_link,
             "created_at": post.created_at.isoformat() if post.created_at else None,
             "user_name": post.user.username,

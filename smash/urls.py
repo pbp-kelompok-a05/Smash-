@@ -35,7 +35,7 @@ urlpatterns = [
     # Routing Sidebar
     path('hot/', post_views.hot_threads, name='hot_threads'),
     path('bookmark/', post_views.bookmarked_threads, name='bookmarked_threads'),
-    path('recent/', post_views.recent_threads, name='recent_threads'),
+    path('recent/', post_views.recent_thread, name='recent_thread'),
 ]
 
 if settings.DEBUG:
