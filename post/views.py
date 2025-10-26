@@ -8,7 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
 from django.contrib.auth import get_user_model
-from .models import Post
+from django.core.exceptions import ValidationError
+from .models import Post, PostInteraction, PostSave
 from comment.models import Comment
 from report.models import Report
 from django.contrib.auth.decorators import login_required
@@ -31,6 +32,12 @@ class PostAPIView(View):
         is_owner = post and post.user == user if post else False
         is_superuser = user.is_superuser or user.has_perm("post.manage_all_posts")
         return is_owner, is_superuser
+    
+    # TAMBAH FUNGSI UNTUK SEARCH POST
+    def search_posts(request):
+        query = request.GET.get('q', '')
+        posts = Post.objects.filter(content__icontains=query)
+        return render(request, 'post/search_results.html', {'posts': posts, 'query': query})
 
     def get(self, request, post_id=None):
         """
@@ -55,6 +62,17 @@ class PostAPIView(View):
                         status=404,
                     )
 
+                # Get user interaction if authenticated
+                user_interaction = None
+                if request.user.is_authenticated:
+                    try:
+                        interaction = PostInteraction.objects.get(
+                            user=request.user, post=post
+                        )
+                        user_interaction = interaction.interaction_type
+                    except PostInteraction.DoesNotExist:
+                        pass
+
                 post_data = {
                     "id": post.id,
                     "title": post.title,
@@ -66,6 +84,9 @@ class PostAPIView(View):
                     "created_at": post.created_at.isoformat(),
                     "updated_at": post.updated_at.isoformat(),
                     "comment_count": post.comments.filter(is_deleted=False).count(),
+                    "likes_count": post.likes_count,
+                    "dislikes_count": post.dislikes_count,
+                    "user_interaction": user_interaction,
                     "can_edit": self.get_user_permissions(request.user, post)[0]
                     or self.get_user_permissions(request.user, post)[1],
                 }
@@ -94,6 +115,17 @@ class PostAPIView(View):
 
                 posts_data = []
                 for post in posts[start:end]:
+                    # Get user interaction if authenticated
+                    user_interaction = None
+                    if request.user.is_authenticated:
+                        try:
+                            interaction = PostInteraction.objects.get(
+                                user=request.user, post=post
+                            )
+                            user_interaction = interaction.interaction_type
+                        except PostInteraction.DoesNotExist:
+                            pass
+
                     posts_data.append(
                         {
                             "id": post.id,
@@ -106,6 +138,9 @@ class PostAPIView(View):
                             "comment_count": post.comments.filter(
                                 is_deleted=False
                             ).count(),
+                            "likes_count": post.likes_count,
+                            "dislikes_count": post.dislikes_count,
+                            "user_interaction": user_interaction,
                             "can_edit": self.get_user_permissions(request.user, post)[0]
                             or self.get_user_permissions(request.user, post)[1],
                         }
@@ -148,20 +183,35 @@ class PostAPIView(View):
                     status=401,
                 )
 
-            # Handle FormData
-            if request.content_type == "multipart/form-data":
+            # Handle FormData (check for multipart or if FILES exist)
+            if request.FILES or (
+                hasattr(request, "content_type")
+                and request.content_type
+                and "multipart/form-data" in request.content_type
+            ):
                 # Parse JSON data from FormData
                 data_str = request.POST.get("data", "{}")
                 try:
                     data = json.loads(data_str)
                 except json.JSONDecodeError:
-                    data = {}
+                    # If no JSON data, try to get individual fields
+                    data = {
+                        "title": request.POST.get("title", ""),
+                        "content": request.POST.get("content", ""),
+                        "video_link": request.POST.get("video_link", ""),
+                    }
 
                 # Get file
                 image_file = request.FILES.get("image")
             else:
                 # Handle regular JSON
-                data = json.loads(request.body)
+                try:
+                    data = json.loads(request.body)
+                except json.JSONDecodeError:
+                    return JsonResponse(
+                        {"status": "error", "message": "Invalid JSON format"},
+                        status=400,
+                    )
                 image_file = None
 
             # Validasi required fields
@@ -231,7 +281,15 @@ class PostAPIView(View):
             return JsonResponse(
                 {"status": "error", "message": "Invalid JSON format"}, status=400
             )
+        except ValidationError as e:
+            return JsonResponse(
+                {"status": "error", "message": f"Validation error: {str(e)}"},
+                status=400,
+            )
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()  # Print full error to console for debugging
             return JsonResponse(
                 {"status": "error", "message": f"Error creating post: {str(e)}"},
                 status=500,
@@ -364,7 +422,57 @@ class PostInteractionView(View):
             post = Post.objects.get(id=post_id, is_deleted=False)
             data = json.loads(request.body) if request.body else {}
 
-            if action == "report":
+            if action == "like" or action == "dislike":
+                # Handle like/dislike action
+                try:
+                    interaction = PostInteraction.objects.get(
+                        user=request.user, post=post
+                    )
+
+                    # If same interaction, remove it (toggle off)
+                    if interaction.interaction_type == action:
+                        interaction.delete()
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": f"{action.capitalize()} removed",
+                                "action": "removed",
+                                "likes_count": post.likes_count,
+                                "dislikes_count": post.dislikes_count,
+                                "user_interaction": None,
+                            }
+                        )
+                    else:
+                        # Change interaction type (like to dislike or vice versa)
+                        interaction.interaction_type = action
+                        interaction.save()
+                        return JsonResponse(
+                            {
+                                "status": "success",
+                                "message": f"Changed to {action}",
+                                "action": "changed",
+                                "likes_count": post.likes_count,
+                                "dislikes_count": post.dislikes_count,
+                                "user_interaction": action,
+                            }
+                        )
+                except PostInteraction.DoesNotExist:
+                    # Create new interaction
+                    PostInteraction.objects.create(
+                        user=request.user, post=post, interaction_type=action
+                    )
+                    return JsonResponse(
+                        {
+                            "status": "success",
+                            "message": f"Post {action}d",
+                            "action": "added",
+                            "likes_count": post.likes_count,
+                            "dislikes_count": post.dislikes_count,
+                            "user_interaction": action,
+                        }
+                    )
+
+            elif action == "report":
                 # Handle report action
                 report = Report.objects.create(
                     reporter=request.user,

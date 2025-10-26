@@ -54,4 +54,7 @@ urlpatterns = [
 
     # Delete and Edit
     path('<int:post_id>/', views.PostAPIView.as_view(), name='post_detail_api'),
+    
+    # Search post 
+    path('search/', views.search_posts, name='search_posts')
 ]

@@ -1,18 +1,9 @@
-{% if inline_ad %}
-<div class="ad-card bg-white rounded-2xl shadow-sm border p-4 my-4">
-  <div class="flex items-center justify-between mb-2">
-    <span class="text-sm font-semibold text-gray-700">Sponsored</span>
-    <span class="text-xs text-gray-400">{{ inline_ad.title }}</span>
-  </div>
-
+{% if inline_ad and inline_ad.image %}
   {% if inline_ad.link %}
-    <a href="{{ inline_ad.link }}" target="_blank" rel="noopener" class="block">
-      <img src="{{ inline_ad.image.url }}" alt="{{ inline_ad.title }}"
-           class="w-full h-44 object-cover rounded-lg">
+    <a href="{{ inline_ad.link }}" target="_blank" rel="noopener noreferrer" class="block">
+      <img src="{{ inline_ad.image.url }}" alt="{{ inline_ad.title|default:'Advertisement' }}" class="w-full h-44 sm:h-56 object-cover rounded-xl">
     </a>
   {% else %}
-    <img src="{{ inline_ad.image.url }}" alt="{{ inline_ad.title }}"
-         class="w-full h-44 object-cover rounded-lg">
+    <img src="{{ inline_ad.image.url }}" alt="{{ inline_ad.title|default:'Advertisement' }}" class="w-full h-44 sm:h-56 object-cover rounded-xl">
   {% endif %}
-</div>
 {% endif %}

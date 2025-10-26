@@ -3,26 +3,34 @@ from post.models import Post
 from django.http import HttpResponseRedirect, JsonResponse
 from profil.models import Profile
 from profil.forms import ProfileForm
+from django.contrib.auth.decorators import login_required
 
-
+@login_required(login_url='account:login_register')
 def show_views(request):
     post_list = Post.objects.all()
-    context={
-        'post_list' : post_list
+    try:
+        profile = Profile.objects.get(user=request.user)
+        bio = profile.bio
+    except Profile.DoesNotExist:
+        bio = "Belum ada bio"
+    context = {
+        'post_list': post_list,
+        'bio': bio,
     }
-    return render(request, "main.html",context)
-
-
+    return render(request, "profile_user.html", context)
 # Create your views here.
-def create_profil(request):
-    profil = get_object_or_404(Profile, user=request.user)
-    form = ProfileForm(request.POST or None, instance=profil)
-    if form.is_valid() and request.method == "POST":
-        profil_entry = form.save(commit=False)
-        profil_entry.user = request.user
-        profil_entry.save()
+def edit_or_create_profile(request):
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    form = ProfileForm(request.POST or None, instance=profile)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
         return redirect("profil:show_views")
-    context = {"form": form}
+
+    context = {
+        "form": form,
+        "is_edit": not created,
+    }
     return render(request, "edit_profile.html", context)
 
 

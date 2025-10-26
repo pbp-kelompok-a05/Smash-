@@ -1,75 +1,158 @@
-from ads.forms import AdForm
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login
-from django.urls import reverse_lazy
-from django.contrib.auth.decorators import user_passes_test
-from django.contrib import messages
-from django.template.loader import render_to_string
+import json
 from django.http import JsonResponse
-from .models import Ad
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import user_passes_test
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views import View
+from .models import Advertisement
+from .forms import AdForm, PremiumSubscribeForm
+from django.shortcuts import redirect
+
+
 
 def is_superuser(user):
+    """Cuma boleh diakses superuser."""
     return user.is_superuser
 
-@user_passes_test(lambda u: u.is_superuser, login_url='/admin-login/')
-def manage_ads(request):
-    ads = Ad.objects.all().order_by('-created_at')
 
-    # handle form submission
-    if request.method == 'POST':
+@method_decorator(csrf_exempt, name="dispatch")
+class AdvertisementAPI(View):
+    """API CRUD Iklan untuk Superuser (AJAX)"""
+
+    def get(self, request, ad_id=None):
+        """GET: ambil satu atau semua iklan"""
+        if ad_id:
+            ad = get_object_or_404(Advertisement, id=ad_id)
+            return JsonResponse({
+                "id": ad.id,
+                "title": ad.title,
+                "description": ad.description,
+                "image": ad.image.url if ad.image else None,
+                "link": ad.link,
+                "ad_type": ad.ad_type,
+                "popup_delay_seconds": ad.popup_delay_seconds,
+                "is_active": ad.is_active,
+            })
+
+        ads = Advertisement.objects.all().order_by("-created_at")
+        return JsonResponse({
+            "ads": [
+                {
+                    "id": ad.id,
+                    "title": ad.title,
+                    "link": ad.link,
+                    "ad_type": ad.ad_type,
+                    "popup_delay_seconds": ad.popup_delay_seconds,
+                    "is_active": ad.is_active,
+                    "image": ad.image.url if ad.image else None,
+                }
+                for ad in ads
+            ]
+        })
+
+    def post(self, request, ad_id=None):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return JsonResponse({"status": "forbidden", "message": "Admin only"}, status=403)
+        """
+        POST:
+        - Jika tanpa ad_id → CREATE
+        - Jika dengan ad_id → UPDATE
+        """
+        if ad_id:
+            return self.update_ad(request, ad_id)
+
+        # CREATE
         form = AdForm(request.POST, request.FILES)
         if form.is_valid():
-            ad = form.save()
-            if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                html = render_to_string("ads/partials/ad_card.html", {"ad": ad})
-                return JsonResponse({"success": True, "html": html})
-            return redirect('manage_ads')
-        else:
-            return JsonResponse({"success": False, "errors": form.errors}, status=400)
-    else:
-        form = AdForm()
+            ad = form.save(commit=False)
+            ad.owner = request.user
+            ad.save()
+            return JsonResponse({"status": "success", "message": "Iklan berhasil dibuat"})
+        return JsonResponse({"status": "error", "errors": form.errors}, status=400)
 
-    return render(request, 'manage_ads.html', {'ads': ads, 'form': form})
-
-@user_passes_test(lambda u: u.is_superuser, login_url='/admin-login/')
-def delete_ad(request, ad_id):
-    ad = get_object_or_404(Ad, id=ad_id)
-    if request.method == "POST":
-        ad.delete()
-        if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": True})
-        return redirect("manage_ads")
-    return JsonResponse({"success": False})
-
-def admin_login(request):
-    """Login khusus untuk admin/superuser sebelum ke halaman kelola iklan."""
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        user = authenticate(request, username=username, password=password)
-        if user is not None and user.is_superuser:
-            login(request, user)
-            return redirect("manage_ads")
-        else:
-            messages.error(request, "Username atau password salah, atau kamu bukan admin.")
-    
-    return render(request, "admin_login.html")
-
-@user_passes_test(lambda u: u.is_superuser, login_url=reverse_lazy('admin-login'))
-def edit_ad(request, ad_id):
-    ad = get_object_or_404(Ad, id=ad_id)
-    if request.method == "POST":
+    def update_ad(self, request, ad_id):
+        """UPDATE iklan"""
+        ad = get_object_or_404(Advertisement, id=ad_id)
         form = AdForm(request.POST, request.FILES, instance=ad)
-        if form.is_valid():
-            ad = form.save()
-            html = render_to_string("ads/partials/ad_card.html", {"ad": ad})
-            return JsonResponse({"success": True, "id": ad.id, "html": html})
-    return JsonResponse({"success": False})
 
-@user_passes_test(lambda u: u.is_superuser)
-def toggle_ad(request, ad_id):
-    ad = get_object_or_404(Ad, id=ad_id)
-    ad.active = not ad.active
-    ad.save()
-    return JsonResponse({"success": True, "active": ad.active})
+        if form.is_valid():
+            updated = form.save(commit=False)
+            is_active_raw = request.POST.get("is_active")
+            if is_active_raw is not None:
+                updated.is_active = str(is_active_raw).lower() in {"true", "1", "on", "yes"}
+            updated.save()
+
+            return JsonResponse({
+                "status": "success",
+                "message": "Iklan berhasil diperbarui",
+                "ad": {
+                    "id": updated.id,
+                    "title": updated.title,
+                    "description": updated.description,
+                    "image": updated.image.url if updated.image else None,
+                    "link": updated.link,
+                    "ad_type": updated.ad_type,
+                    "popup_delay_seconds": updated.popup_delay_seconds,
+                    "is_active": updated.is_active,
+                },
+            })
+        else:
+            return JsonResponse({"status": "error", "errors": form.errors}, status=400)
+
+    def delete(self, request, ad_id):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return JsonResponse({"status": "forbidden", "message": "Admin only"}, status=403)
+        """DELETE: hapus iklan"""
+        ad = get_object_or_404(Advertisement, id=ad_id)
+        ad.delete()
+        return JsonResponse({"status": "success", "message": "Iklan berhasil dihapus"})
+
+
+@user_passes_test(is_superuser)
+def manage_ads_page(request):
+    """Halaman dashboard kelola iklan"""
+    form = AdForm()
+    return render(request, "manage_ads.html", {"form": form})
+
+
+def redirect_ad(request, ad_id: int):
+    ad = get_object_or_404(Advertisement, id=ad_id, is_active=True)
+    if not ad.link:
+        return redirect("/")
+    return redirect(ad.link)
+
+
+from .models import PremiumSubscriber
+
+
+def premium_page(request):
+    return render(request, "premium.html")
+
+
+def premium_checkout(request):
+    """Page alamat pembayaran premium"""
+    # Normally: create checkout session here then redirect to gateway.
+    # For demo, just go to success.
+    return redirect("ads_premium_success")
+
+
+def premium_success(request):
+    """Page sukses langganan premium"""
+    initial_email = request.user.email if request.user.is_authenticated else ""
+    form = PremiumSubscribeForm(request.POST or None, initial={"email": initial_email})
+    saved = False
+    saved_email = None
+    if request.method == "POST" and form.is_valid():
+        email = form.cleaned_data["email"].strip()
+        PremiumSubscriber.objects.get_or_create(
+            email=email,
+            defaults={
+                "user": request.user if request.user.is_authenticated else None,
+                "payment_reference": "manual",
+                "active": True,
+            },
+        )
+        saved = True
+        saved_email = email
+    return render(request, "premium_success.html", {"form": form, "saved": saved, "saved_email": saved_email})

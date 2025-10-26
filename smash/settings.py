@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "embed_video",
     "main",
     "post",
     "report",
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
     "profil",
     "account",
     "cardview",
+    "filter",
 ]
 
 MIDDLEWARE = [
@@ -83,7 +85,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "ads.context_processors.ads_context",
             ],
         },
     },

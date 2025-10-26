@@ -85,6 +85,17 @@ class CommentAPIView(View):
 
                 comments_data = []
                 for comment in comments:
+                    # Get user's interaction with this comment
+                    user_interaction = None
+                    if request.user.is_authenticated:
+                        try:
+                            interaction = CommentInteraction.objects.get(
+                                user=request.user, comment=comment
+                            )
+                            user_interaction = interaction.interaction_type
+                        except CommentInteraction.DoesNotExist:
+                            pass
+
                     comment_data = {
                         "id": comment.id,
                         "content": comment.content,
@@ -94,6 +105,8 @@ class CommentAPIView(View):
                         "created_at": comment.created_at.isoformat(),
                         "updated_at": comment.updated_at.isoformat(),
                         "likes_count": comment.likes_count,
+                        "dislikes_count": comment.dislikes_count,
+                        "user_interaction": user_interaction,
                         "can_edit": self.get_user_permissions(request.user, comment)[0]
                         or self.get_user_permissions(request.user, comment)[1],
                         "replies": [],
@@ -148,8 +161,7 @@ class CommentAPIView(View):
                 status=500,
             )
 
-    @method_decorator(require_http_methods(["POST"]))
-    def post(self, request, post_id):
+    def post(self, request, post_id=None, comment_id=None):
         """
         POST: Create new comment atau reply
         AJAX Support: ✅
@@ -159,6 +171,12 @@ class CommentAPIView(View):
                 return JsonResponse(
                     {"status": "error", "message": "Authentication required"},
                     status=401,
+                )
+
+            if not post_id:
+                return JsonResponse(
+                    {"status": "error", "message": "Post ID is required"},
+                    status=400,
                 )
 
             post = Post.objects.get(id=post_id, is_deleted=False)
@@ -211,8 +229,7 @@ class CommentAPIView(View):
                 status=500,
             )
 
-    @method_decorator(require_http_methods(["PUT"]))
-    def put(self, request, comment_id):
+    def put(self, request, post_id=None, comment_id=None):
         """
         PUT: Update existing comment
         AJAX Support: ✅
@@ -222,6 +239,12 @@ class CommentAPIView(View):
                 return JsonResponse(
                     {"status": "error", "message": "Authentication required"},
                     status=401,
+                )
+
+            if not comment_id:
+                return JsonResponse(
+                    {"status": "error", "message": "Comment ID is required"},
+                    status=400,
                 )
 
             comment = Comment.objects.get(id=comment_id)
@@ -264,8 +287,7 @@ class CommentAPIView(View):
                 status=500,
             )
 
-    @method_decorator(require_http_methods(["DELETE"]))
-    def delete(self, request, comment_id):
+    def delete(self, request, post_id=None, comment_id=None):
         """
         DELETE: Soft delete comment
         AJAX Support: ✅
@@ -275,6 +297,12 @@ class CommentAPIView(View):
                 return JsonResponse(
                     {"status": "error", "message": "Authentication required"},
                     status=401,
+                )
+
+            if not comment_id:
+                return JsonResponse(
+                    {"status": "error", "message": "Comment ID is required"},
+                    status=400,
                 )
 
             comment = Comment.objects.get(id=comment_id)

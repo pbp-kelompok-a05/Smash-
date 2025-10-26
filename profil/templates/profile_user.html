@@ -6,296 +6,417 @@
 {% endblock meta %}
 
 {% block content %}
-{% include 'navbar.html' %}
-{% include 'sidebar.html' %}
-<div class="bg-gradient-to-br from-green-100 via-white to-pink-100 w-full pt-16 min-h-screen">
-        <div class="max-w-4xl mx-auto bg-gray-100 rounded-xl p-8 mt-6 shadow-lg">
-            <div class="overflow-y-auto flex-1">
-                <div class="bg-white rounded-xl p-6 shadow sticky top-0 z-10 mb-6">
-        <!-- Contoh isi profil -->
-                    <div class="flex items-center space-x-6">
-                        <img src="{% static 'img/default-avatar.png' %}" alt="Profil" class="rounded-full w-20 h-20" />
-                        <div>
-                            <h2 class="text-lg">Hello,</h2>
-                            <h1 id="profile-name" class="text-4xl font-extrabold">Loading...</h1>
-                            <p id="user-bio" class="text-gray-600 mt-1">
-                              {{ user.profile.bio|default:"Belum ada bio" }}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <a href="{% url 'main:edit_profile' %}">
-                      <button>+ edit bio</button>
-                    </a>
-                    <div class="flex gap-3 mt-4">
-                    <a id= filter-my class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">
-                        My Posts
-                    </a>
-                    <a id=filter-bookmark class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
-                        Bookmark
-                    </a>
-                    <a id=filter-like class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
-                        Liked
-                    </a>
-                    </div>
-                </div>
-                <div id="posts-list"></div>
-                <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
-                  <svg class="animate-spin h-8 w-8 text-green-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                  <p class="text-gray-600 mt-3">Loading post...</p>
-                </div>
-                    <!-- Error State -->
-                <div id="error" class="hidden"></div>
-                <!-- Empty State -->
-                <div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
-                  <div class="w-32 h-32 mx-auto mb-4">
-                    <img src="{% static 'image/no-post.png' %}" alt="No post available" class="w-full h-full object-contain">
-                  </div>
-                  <h3 class="text-lg font-medium text-gray-900 mb-2">No post found</h3>
-                </div>
-            </div>
-        </div>
+<div class="min-h-screen flex">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white/80 border-r border-gray-200 py-8 px-6 hidden lg:block">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">S</div>
+      <div>
+        <div class="text-xl font-semibold text-purple-800">Smash!</div>
+        <div class="text-xs text-gray-500">Community • Padel</div>
+      </div>
     </div>
+    <nav class="space-y-4 text-sm text-gray-700">
+      <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">Thread</div>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="{% url 'main:home' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M3 16h18" /></svg>
+        Recent
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#"><span class="text-xl">🏷️</span> For You</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#"><span class="text-xl">🔥</span> Hot Thread</a>
+
+      <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Menu</div>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🔔 Notification</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🔖 Bookmark</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-pink-50 text-pink-700 font-medium" href="{% url 'profil:show_views' %}">👤 Profile</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">✉️ Message</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🧩 Communities</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">⚙️ Settings</a>
+
+      <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Others</div>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">ℹ️ Tentang SMASH</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">📞 Hubungi Kami</a>
+
+      {% if user.is_authenticated %}
+        <div class="mt-8 pt-4 border-t border-gray-200">
+          <button id="logout-btn" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 w-full text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Logout
+          </button>
+        </div>
+      {% else %}
+        <div class="mt-8 pt-4 border-t border-gray-200 space-y-2">
+          <a href="{% url 'account:login_register' %}" class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 w-full">Register</a>
+          <a href="{% url 'account:login_register' %}" class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 w-full">Login</a>
+        </div>
+      {% endif %}
+      <div class="mt-8 text-xs text-gray-400">© 2025 SMASH. All rights reserved.</div>
+    </nav>
+  </aside>
+  <div class="flex-1 flex flex-col">
+  <!-- Topbar -->
+  <header class="flex items-center justify-between px-6 py-5 bg-white/80 backdrop-blur sticky top-0 z-10">
+    <div class="flex items-center gap-4">
+      <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
+      <div class="hidden lg:flex items-center gap-4">
+        <div class="text-2xl font-extrabold text-purple-700">Smash!</div>
+      </div>
+      <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd" /></svg>
+        <input type="search" placeholder="Search..." class="ml-3 outline-none w-full text-sm" />
+      </form>
+    </div>
+
+    <div class="flex items-center gap-3">
+      {% if user.is_authenticated %}
+        <button id="create-post-btn" class="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          Create Post
+        </button>
+        <span class="text-sm text-gray-700 hidden sm:block">Welcome, {{ user.username }}</span>
+        <button id="mobile-logout-btn" class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          Logout
+        </button>
+      {% else %}
+        <a href="{% url 'account:login_register' %}" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2 hover:bg-blue-700">Register</a>
+        <a href="{% url 'account:login_register' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm hidden sm:flex items-center gap-2 hover:bg-gray-100">Login</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Main Profile Content -->
+  <main class="flex-1 px-6 py-8 overflow-y-auto">
+    <div class="max-w-4xl mx-auto bg-gray-100 rounded-xl p-8 mt-6 shadow-lg">
+      <div class="bg-white rounded-xl p-6 shadow mb-6">
+        <div class="flex items-center space-x-6">
+          <img src="{% static 'img/default-avatar.png' %}" alt="Profil" class="rounded-full w-20 h-20" />
+          <div>
+            <h2 class="text-lg">Hello,</h2>
+            <h1 id="profile-name" class="text-4xl font-extrabold">{{ user.username }}</h1>
+            <p id="user-bio" class="text-gray-600 mt-1">{{ bio|default:"Belum ada bio" }}</p>
+          </div>
+        </div>
+
+        <a href="{% url 'profil:edit_or_create_profile' %}" class="inline-block mt-4">
+          <button class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">+ edit bio</button>
+        </a>
+
+        <div class="flex gap-3 mt-4">
+          <button id="filter-my" class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">My Posts</button>
+          <button id="filter-bookmark" class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Bookmark</button>
+          <button id="filter-like" class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Liked</button>
+        </div>
+      </div>
+
+      <div id="posts-list"></div>
+      <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+        <svg class="animate-spin h-8 w-8 text-green-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <p class="text-gray-600 mt-3">Loading post...</p>
+      </div>
+      <div id="error" class="hidden"></div>
+      <div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+        <div class="w-32 h-32 mx-auto mb-4">
+          <img src="{% static 'image/no-post.png' %}" alt="No post available" class="w-full h-full object-contain">
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No post found</h3>
+      </div>
+    </div>
+  </main>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+{% if user.is_authenticated %}
+<!-- Create Post Modal -->
+<div id="create-post-modal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-backdrop absolute inset-0" id="modal-backdrop"></div>
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-xl font-semibold text-gray-900">Create New Post</h3>
+        <button id="close-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <form id="create-post-form" class="space-y-4">
+          {% csrf_token %}
+          <div>
+            <label for="post-title" class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+            <input type="text" id="post-title" name="title" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="What's on your mind?">
+          </div>
+          <div>
+            <label for="post-content" class="block text-sm font-medium text-gray-700 mb-2">Content *</label>
+            <textarea id="post-content" name="content" required rows="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none" placeholder="Share your thoughts, experiences, or questions..."></textarea>
+          </div>
+          <div>
+            <label for="post-image" class="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
+            <input type="file" id="post-image" name="image" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+            <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF</p>
+          </div>
+          <div>
+            <label for="post-video" class="block text-sm font-medium text-gray-700 mb-2">Video Link (Optional)</label>
+            <input type="url" id="post-video" name="video_link" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="https://youtube.com/ ...">
+          </div>
+          <div id="form-messages" class="hidden"></div>
+        </form>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+        <button type="button" id="cancel-post" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Cancel</button>
+        <button type="submit" form="create-post-form" id="submit-post" class="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors flex items-center gap-2">
+          <span>Create Post</span>
+          <div id="submit-spinner" class="hidden loading-spinner border-white border-t-transparent"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Image Modal -->
+<div id="image-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-90">
+  <div class="relative max-w-4xl max-h-full">
+    <button id="close-image-modal" class="absolute top-4 right-4 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-colors">&times;</button>
+    <img id="modal-image" src="" alt="Enlarged post image" class="max-w-full max-h-full object-contain">
+  </div>
+</div>
+
 <script>
-//belum membuat ENDPOINT
-const PROFILE_API_ENDPOINT = "{% url 'profil:show_json' %}";
-const CURRENT_USER_ID = "{{ user.id|default_if_none:'' }}";
-
-const profilname = document.getElementById('profile-name');
-const postContainer = document.getElementById('posts-list');
-const showMyPostButton = document.getElementById('filter-my');
-const showMyBookmarkButton = document.getElementById('filter-bookmark');
-const showMyLikesButton = document.getElementById('filter-like');
-const postGridContainer = document.getElementById('grid');
-const loadingSpinner = document.getElementById('loading');
-const errorMessage = document.getElementById('error');
-const emptyStateDisplay = document.getElementById('empty');
-
-//initial values
-document.getElementById('profile-name').textContent = '{{ user.username }}';
-document.getElementById('user-bio').textContent =
-  '{{ user.profile.bio|default:"Belum ada bio" }}';
-
-//state variable
-let activeFilter = 'my';
-let allPostData=[]
-let allLikedPost=[]
-// Update filter button appearance
-function updateFilterButtonsAppearance() {
-  if (!showMyPostButton || !showMyBookmarkButton || !showMyLikesButton) return;
-  
-  if (activeFilter === 'my') {
-    showMyPostButton.className = "px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition";
-    showMyBookmarkButton.className = 'px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
-    showMyLikesButton.className='px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
-  } else if (activeFilter=== 'bookmark') {
-    showMyPostButton.className = "px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition";
-    showMyBookmarkButton.className = 'px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition';
-    showMyLikesButton.className='px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
   }
-  else{
-    showMyPostButton.className = "px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition";
-    showMyBookmarkButton.className = 'px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition';
-    showMyLikesButton.className='px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition';
+  const csrftoken = getCookie('csrftoken');
+
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+  document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
+
+  function handleLogout() {
+    if (!confirm('Are you sure you want to logout?')) return;
+    fetch('/account/logout/ajax/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) window.location.href = d.redirect_url; })
+    .catch(() => alert('Logout failed.'));
   }
-}
-function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
-  loadingSpinner.classList.toggle('hidden', !showLoading);
-  errorMessage.classList.toggle('hidden', !showError);
-  emptyStateDisplay.classList.toggle('hidden', !showEmpty);
-}
-// Create news card element
-function buildPostCardElement(item) {
-  // --- sanitise semua input ---
-  const linkDetail = `{% url 'post:user/post/' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', '');
-  const title      = DOMPurify.sanitize(item.title);
-  const content    = DOMPurify.sanitize(item.content);
-  const image      = DOMPurify.sanitize(item.image || '');
-  const createdAt  = new Date(item.created_at).toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
+
+  // Modal behaviour (create & image)
+  const modal = document.getElementById('create-post-modal');
+  const createPostBtn = document.getElementById('create-post-btn');
+  const closeModalBtn = document.getElementById('close-modal');
+  const cancelPostBtn = document.getElementById('cancel-post');
+  const modalBackdrop = document.getElementById('modal-backdrop');
+  const createPostForm = document.getElementById('create-post-form');
+  const formMessages = document.getElementById('form-messages');
+
+  function showModal() {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function hideModal() {
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    createPostForm.reset();
+    formMessages.classList.add('hidden');
+  }
+  function showMessage(msg, type) {
+    formMessages.innerHTML = `<div class="p-3 rounded-lg ${type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">${msg}</div>`;
+    formMessages.classList.remove('hidden');
+  }
+
+  createPostBtn?.addEventListener('click', showModal);
+  closeModalBtn?.addEventListener('click', hideModal);
+  cancelPostBtn?.addEventListener('click', hideModal);
+  modalBackdrop?.addEventListener('click', hideModal);
+
+  createPostForm?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submit-post');
+    const spinner = document.getElementById('submit-spinner');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    spinner.classList.remove('hidden');
+    submitBtn.innerHTML = '<span>Creating...</span>';
+
+    try {
+      const formData = new FormData(this);
+      const jsonData = {
+        title: formData.get('title'),
+        content: formData.get('content'),
+        video_link: formData.get('video_link') || ''
+      };
+      const requestData = new FormData();
+      requestData.append('data', JSON.stringify(jsonData));
+      const imageFile = document.getElementById('post-image').files[0];
+      if (imageFile) requestData.append('image', imageFile);
+
+      const response = await fetch('/post/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: requestData
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        showMessage('Post created successfully!', 'success');
+        setTimeout(() => {
+          hideModal();
+          fetchPostFromServer(); // reload posts
+        }, 1500);
+      } else {
+        showMessage(data.message || 'Error creating post', 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showMessage('Network error. Please try again.', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      spinner.classList.add('hidden');
+      submitBtn.innerHTML = originalText;
+    }
   });
 
-  const authorName = DOMPurify.sanitize(item.user_name || 'Anonymous');
+  // Image modal
+  const imageModal = document.getElementById('image-modal');
+  const modalImage = document.getElementById('modal-image');
+  const closeImageModalBtn = document.getElementById('close-image-modal');
 
-  // --- buat elemen utama ---
-  const card = document.createElement('div');
-  card.className = 'bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden w-full';
+  window.openImageModal = function(src) {
+    modalImage.src = src;
+    imageModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  };
+  closeImageModalBtn?.addEventListener('click', () => {
+    imageModal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  });
+  imageModal?.addEventListener('click', (e) => {
+    if (e.target === imageModal) {
+      imageModal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+  });
 
-  // --- struktur HTML dalam bentuk string ---
-  card.innerHTML = `
-    <!-- Header -->
-    <div class="flex items-start p-5 pb-0">
-      <img src="https://placehold.co/40x40" alt="avatar" class="w-10 h-10 rounded-full object-cover mr-3">
-      <div class="flex-1">
-        <p class="text-sm font-bold text-gray-800">${authorName}</p>
-        <div class="flex items-center space-x-2 text-sm text-gray-500">
-          <span class="text-blue-500 font-semibold">@${authorName}</span>
-          <span>• ${createdAt}</span>
+  // Profile-page post logic
+  const PROFILE_API_ENDPOINT = "{% url 'profil:show_json' %}";
+  const CURRENT_USER_ID = "{{ user.id|default_if_none:'' }}";
+  const postContainer = document.getElementById('posts-list');
+  const showMyPostButton = document.getElementById('filter-my');
+  const showMyBookmarkButton = document.getElementById('filter-bookmark');
+  const showMyLikesButton = document.getElementById('filter-like');
+  const loadingSpinner = document.getElementById('loading');
+  const errorMessage = document.getElementById('error');
+  const emptyStateDisplay = document.getElementById('empty');
+
+  let activeFilter = 'my';
+  let allPostData = [];
+
+  function updateFilterButtonsAppearance() {
+    const base = 'px-4 py-2 rounded-lg font-medium transition';
+    showMyPostButton.className = base + (activeFilter === 'my' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+    showMyBookmarkButton.className = base + (activeFilter === 'bookmark' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+    showMyLikesButton.className = base + (activeFilter === 'liked' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+  }
+
+  function displayPageSection({ showLoading = false, showError = false, showEmpty = false }) {
+    loadingSpinner.classList.toggle('hidden', !showLoading);
+    errorMessage.classList.toggle('hidden', !showError);
+    emptyStateDisplay.classList.toggle('hidden', !showEmpty);
+  }
+
+  function buildPostCardElement(item) {
+    const title = DOMPurify.sanitize(item.title);
+    const content = DOMPurify.sanitize(item.content);
+    const image = DOMPurify.sanitize(item.image || '');
+    const createdAt = new Date(item.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    const authorName = DOMPurify.sanitize(item.user_name || 'Anonymous');
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden w-full';
+    card.innerHTML = `
+      <div class="flex items-start p-5 pb-0">
+        <img src="https://placehold.co/40x40" alt="avatar" class="w-10 h-10 rounded-full object-cover mr-3">
+        <div class="flex-1">
+          <p class="text-sm font-bold text-gray-800">${authorName}</p>
+          <div class="flex items-center space-x-2 text-sm text-gray-500"><span class="text-blue-500 font-semibold">@${authorName}</span><span>• ${createdAt}</span></div>
         </div>
       </div>
-    </div>
-
-    <!-- Body -->
-    <div class="p-5">
-      <h2 class="text-lg font-bold text-gray-900 mb-2">${title}</h2>
-      <p class="text-gray-700 leading-relaxed mb-4">${content.substring(0, 200)}
-        ${content.length > 200 ? `<a href='${linkDetail}' class="text-blue-500 font-medium hover:underline">...view more</a>` : ''}
-      </p>
-
-      ${image ? `<img src="${image}" alt="${title}" class="rounded-xl w-full object-cover mb-4 transition-transform duration-300 hover:scale-[1.02]">` : ''}
-
-      <hr class="border-gray-100 mb-3">
-
-      <!-- Action buttons -->
-      <div class="flex justify-between text-gray-600 text-sm select-none">
-        <div class="flex space-x-6">
-          <button class="like-btn flex items-center hover:text-blue-600 transition" data-active-color="text-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.125 18.75h8.25a1.125 1.125 0 001.125-1.125v-6.75a1.125 1.125 0 00-1.125-1.125h-4.189l.513-2.462a.563.563 0 00-.551-.688H10.5a.563.563 0 00-.562.562v11.438a.563.563 0 00.563.563zM6 18.75H3.75a.75.75 0 01-.75-.75V10.5a.75.75 0 01.75-.75H6v9z" />
-            </svg>
-            Like
-          </button>
-
-          <button class="dislike-btn flex items-center hover:text-red-500 transition" data-active-color="text-red-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1 rotate-180">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.75h-8.25a1.125 1.125 0 01-1.125-1.125v-6.75a1.125 1.125 0 011.125-1.125h4.189l-.513-2.462a.563.563 0 01.551-.688h3.213a.563.563 0 01.562.562v11.438a.563.563 0 01-.563.563zM18 18.75h2.25a.75.75 0 00.75-.75V10.5a.75.75 0 00-.75-.75H18v9z" />
-            </svg>
-            Dislike
-          </button>
-
-          <button class="comment-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3h9m-9 3h5.25M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4.95-1.32L3 20.25l1.65-3.3A7.94 7.94 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            Comment
-          </button>
-        </div>
-
-        <div class="flex space-x-6">
-          <button class="save-btn flex items-center hover:text-yellow-500 transition" data-active-color="text-yellow-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 mr-1">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 3H6.75A1.5 1.5 0 005.25 4.5v15a.75.75 0 001.21.59L12 16.5l5.54 3.59a.75.75 0 001.21-.59v-15A1.5 1.5 0 0017.25 3z" />
-            </svg>
-            Save
-          </button>
-
-          <button class="share-btn flex items-center hover:text-blue-500 transition" data-active-color="text-blue-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-5 h-5 mr-1">
-              <circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/>
-              <line x1="8" y1="12" x2="16" y2="7"/><line x1="8" y1="12" x2="16" y2="17"/>
-            </svg>
-            Share
-          </button>
+      <div class="p-5">
+        <h2 class="text-lg font-bold text-gray-900 mb-2">${title}</h2>
+        <p class="text-gray-700 leading-relaxed mb-4">${content.substring(0, 200)}</p>
+        ${image ? `<img src="${image}" alt="${title}" class="rounded-xl w-full object-cover mb-4">` : ''}
+        <hr class="border-gray-100 mb-3">
+        <div class="flex justify-between text-gray-600 text-sm">
+          <div class="flex space-x-6">
+            <button class="like-btn flex items-center hover:text-blue-600"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>Like</button>
+            <button class="comment-btn flex items-center hover:text-blue-500"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/></svg>Comment</button>
+            <button class="save-btn flex items-center hover:text-yellow-500"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.25 3H6.75A1.5 1.5 0 005.25 4.5v15a.75.75 0 001.21.59L12 16.5l5.54 3.59a.75.75 0 001.21-.59v-15A1.5 1.5 0 0017.25 3z"/></svg>Save</button>
+          </div>
+          <button class="share-btn flex items-center hover:text-blue-500"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><line x1="8" y1="12" x2="16" y2="7"/><line x1="8" y1="12" x2="16" y2="17"/></svg>Share</button>
         </div>
       </div>
-    </div>
-  `;
+    `;
+    return card;
+  }
 
-  // --- tambahkan event listener like/dislike ---
-  const likeBtn = card.querySelector('.like-btn');
-  const dislikeBtn = card.querySelector('.dislike-btn');
+  function renderAllPostCards(postItems) {
+    postContainer.innerHTML = '';
+    postItems.forEach(postItem => postContainer.appendChild(buildPostCardElement(postItem)));
+  }
 
-  likeBtn.addEventListener('click', () => {
-    const isActive = likeBtn.classList.toggle('active');
-    likeBtn.classList.toggle(likeBtn.dataset.activeColor, isActive);
-    likeBtn.querySelector('svg').setAttribute('fill', isActive ? 'currentColor' : 'none');
+  function filterAndDisplayPost() {
+    updateFilterButtonsAppearance();
+    let filteredPost;
+    if (activeFilter === 'my') filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
+    else if (activeFilter === 'bookmark') filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
+    else if (activeFilter === 'liked') filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
+    if (filteredPost.length === 0) displayPageSection({ showEmpty: true });
+    else renderAllPostCards(filteredPost);
+  }
 
-    if (isActive) {
-      dislikeBtn.classList.remove('active', dislikeBtn.dataset.activeColor);
-      dislikeBtn.querySelector('svg').setAttribute('fill', 'none');
+  async function fetchPostFromServer() {
+    try {
+      displayPageSection({ showLoading: true });
+      const response = await fetch(PROFILE_API_ENDPOINT, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) throw new Error('Failed to fetch post data');
+      const postData = await response.json();
+      allPostData = postData || [];
+      filterAndDisplayPost();
+    } catch (error) {
+      console.error(error);
+      displayPageSection({ showError: true });
     }
-  });
-
-  dislikeBtn.addEventListener('click', () => {
-    const isActive = dislikeBtn.classList.toggle('active');
-    dislikeBtn.classList.toggle(dislikeBtn.dataset.activeColor, isActive);
-    dislikeBtn.querySelector('svg').setAttribute('fill', isActive ? 'currentColor' : 'none');
-
-    if (isActive) {
-      likeBtn.classList.remove('active', likeBtn.dataset.activeColor);
-      likeBtn.querySelector('svg').setAttribute('fill', 'none');
-    }
-  });
-  return card;
-}
-
-function renderAllPostCards(postItems) {
-  postContainer.innerHTML = '';
-  postItems.forEach(postItem => {
-    const cardElement = buildPostCardElement(postItem);
-    postContainer.appendChild(cardElement);
-  });
-}
-// Fungsi filter and display post unfinished
-function filterAndDisplayPost() {
-  updateFilterButtonsAppearance();
-  
-  let filteredPost;
-  if(activeFilter=== 'my'){
-    filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
   }
-  else if(activeFilter=== 'bookmark'){
-    filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
-  }
-  else if (activeFilter === 'liked'){
-    filteredPost = allPostData.filter(post => post.author_id === CURRENT_USER_ID);
-  }
-  if (filteredPost.length === 0) {
-    displayPageSection({ showEmpty: true });
-  } else {
-    renderAllPostCards(filteredPost);
-  }
-}
-async function fetchPostFromServer() {
-  try {
-    displayPageSection({ showLoading: true });
-    
-    const response = await fetch(PROFILE_API_ENDPOINT, {
-      headers: { 'Accept': 'application/json' },
-    });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch post data from server');
-    }
+  function handleShowMyPostClick() { activeFilter = 'my'; filterAndDisplayPost(); }
+  function handleShowMyBookmarkClick() { activeFilter = 'bookmark'; filterAndDisplayPost(); }
+  function handleShowMyLikeClick() { activeFilter = 'liked'; filterAndDisplayPost(); }
 
-    const postData = await response.json();
-    allPostData   = postData  || [];
-    filterAndDisplayPost();
-  } catch (error) {
-    console.error('Error loading post:', error);
-    displayPageSection({ showError: true });
-  }
-}
-function handleShowMyPostClick() {
-  activeFilter = 'my';
-  filterAndDisplayPost();
-}
-function handleShowMyBookmarkClick() {
-  activeFilter = 'bookmark';
-  filterAndDisplayPost();
-}
-function handleShowMyLikeClick() {
-  activeFilter = 'liked';
-  filterAndDisplayPost();
-}
-//belum membuat fetchPostfromserver
-function initializePostPage() {
-  showMyPostButton.addEventListener('click', handleShowMyPostClick);
-  showMyBookmarkButton.addEventListener('click', handleShowMyBookmarkClick);
-  showMyLikesButton.addEventListener('click', handleShowMyLikeClick);
-  fetchPostFromServer();
-}
-
-initializePostPage()
-
-document.addEventListener('postAdded', function() {
-    // Refresh data without page reload
+  function initializePostPage() {
+    showMyPostButton?.addEventListener('click', handleShowMyPostClick);
+    showMyBookmarkButton?.addEventListener('click', handleShowMyBookmarkClick);
+    showMyLikesButton?.addEventListener('click', handleShowMyLikeClick);
     fetchPostFromServer();
-});
+  }
+
+  initializePostPage();
 </script>
 {% endblock content %}
