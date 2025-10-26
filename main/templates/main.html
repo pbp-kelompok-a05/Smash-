@@ -327,6 +327,35 @@
 
       const csrftoken = getCookie('csrftoken');
 
+      // Load inline ad once and reuse the HTML
+      let inlineAdHtml = '';
+      async function loadInlineAdOnce() {
+        try {
+            const res = await fetch('/ads/api/', { method: 'GET' });
+            if (!res.ok) return '';
+            const data = await res.json();
+            const list = Array.isArray(data?.ads) ? data.ads : [];
+
+            // Filter hanya iklan inline aktif
+            const inlineAds = list.filter(a => a && a.ad_type === 'inline' && a.is_active && a.image);
+            if (inlineAds.length === 0) return '';
+
+            // Pilih secara acak
+            const randomAd = inlineAds[Math.floor(Math.random() * inlineAds.length)];
+
+            // Bangun HTML-nya
+            const img = `<img src="${randomAd.image}" alt="${(randomAd.title || 'Advertisement').replaceAll('"','&quot;')}" class="w-full h-44 sm:h-56 object-cover rounded-xl">`;
+            const inner = randomAd.link
+            ? `<a href="${randomAd.link}" target="_blank" rel="noopener noreferrer" class="block">${img}</a>`
+            : img;
+
+            return `<div class="my-6">${inner}</div>`;
+        } catch (e) {
+            console.error('Failed to load inline ad', e);
+            return '';
+        }
+        }
+
       // Modal functionality - only initialize if modal exists
       const modal = document.getElementById('create-post-modal');
       const createPostBtn = document.getElementById('create-post-btn');
@@ -440,44 +469,51 @@
       }
 
       // Load posts from API
-      function loadPosts() {
-          console.log('Loading posts...');
-          fetch('/post/', {
-              method: 'GET',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'X-CSRFToken': csrftoken
-              }
-          })
-          .then(response => {
-              console.log('Response status:', response.status);
-              if (!response.ok) {
-                  throw new Error('Network response was not ok');
-              }
-              return response.json();
-          })
-          .then(data => {
-              console.log('Posts data received:', data);
-              const container = document.getElementById('posts-container');
-              const loading = document.getElementById('loading-posts');
-              
-              if (loading) {
-                  loading.remove();
-              }
-
-              if (data.status === 'success' && data.posts && data.posts.length > 0) {
-                  console.log('Rendering', data.posts.length, 'posts');
-                  container.innerHTML = data.posts.map(post => createPostCard(post)).join('');
-                  initializePostInteractions();
-              } else {
-                  console.log('No posts found');
-                  showNoPostsMessage(container);
-              }
-          })
-          .catch(error => {
-              console.error('Error loading posts:', error);
-              showErrorState(document.getElementById('posts-container'));
+      async function loadPosts() {
+        console.log('Loading posts...');
+        try {
+          const response = await fetch('/post/', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken
+            }
           });
+          console.log('Response status:', response.status);
+          if (!response.ok) throw new Error('Network response was not ok');
+
+          const data = await response.json();
+          console.log('Posts data received:', data);
+          const container = document.getElementById('posts-container');
+          const loading = document.getElementById('loading-posts');
+          if (loading) loading.remove();
+
+          if (data.status === 'success' && Array.isArray(data.posts) && data.posts.length > 0) {
+            // Load inline ad HTML once
+            const chunks = [];
+            for (let i = 0; i < data.posts.length; i++) {
+            const post = data.posts[i];
+            chunks.push(createPostCard(post));
+
+            // Tiap 5 post, ambil satu iklan random
+            if ((i + 1) % 5 === 0) {
+                const inlineAdHtml = await loadInlineAdOnce();
+                if (inlineAdHtml && inlineAdHtml.trim()) {
+                chunks.push(inlineAdHtml);
+                }
+            }
+            }
+
+            container.innerHTML = chunks.join('');
+            initializePostInteractions();
+          } else {
+            console.log('No posts found');
+            showNoPostsMessage(container);
+          }
+        } catch (error) {
+          console.error('Error loading posts:', error);
+          showErrorState(document.getElementById('posts-container'));
+        }
       }
 
       // Function to create post card HTML
