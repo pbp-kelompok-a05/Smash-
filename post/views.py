@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Count
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Post, PostInteraction, PostSave
+from .models import Post, PostInteraction, PostSave, PostShare
 from comment.models import Comment
 from report.models import Report
 from django.contrib.auth.decorators import login_required
@@ -17,6 +17,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 User = get_user_model()
+
 
 class PostAPIView(View):
     """
@@ -82,6 +83,7 @@ class PostAPIView(View):
                     "comment_count": post.comments.filter(is_deleted=False).count(),
                     "likes_count": post.likes_count,
                     "dislikes_count": post.dislikes_count,
+                    "shares_count": post.shares_count,
                     "user_interaction": user_interaction,
                     "can_edit": self.get_user_permissions(request.user, post)[0]
                     or self.get_user_permissions(request.user, post)[1],
@@ -136,6 +138,7 @@ class PostAPIView(View):
                             ).count(),
                             "likes_count": post.likes_count,
                             "dislikes_count": post.dislikes_count,
+                            "shares_count": post.shares_count,
                             "user_interaction": user_interaction,
                             "can_edit": self.get_user_permissions(request.user, post)[0]
                             or self.get_user_permissions(request.user, post)[1],
@@ -267,6 +270,7 @@ class PostAPIView(View):
                         "user": post.user.username,
                         "created_at": post.created_at.isoformat(),
                         "comment_count": 0,
+                        "shares_count": 0,
                         "can_edit": True,
                     },
                 },
@@ -486,14 +490,14 @@ class PostInteractionView(View):
                 )
 
             elif action == "share":
-                # Handle share action (simulasi)
-                share_count = data.get("share_count", 0) + 1
+                # Handle share action - track each share
+                PostShare.objects.create(user=request.user, post=post)
 
                 return JsonResponse(
                     {
                         "status": "success",
                         "message": "Post berhasil dibagikan",
-                        "share_count": share_count,
+                        "shares_count": post.shares_count,
                     }
                 )
 
@@ -512,14 +516,14 @@ class PostInteractionView(View):
                 status=500,
             )
 
+
 # TAMBAH FUNGSI UNTUK SEARCH POST
 def search_posts(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get("q", "")
     posts = Post.objects.filter(
-        Q(title__icontains=query) | Q(content__icontains=query),
-        is_deleted=False
+        Q(title__icontains=query) | Q(content__icontains=query), is_deleted=False
     )
-    return render(request, 'search_results.html', {'posts': posts, 'query': query})
+    return render(request, "search_results.html", {"posts": posts, "query": query})
 
 
 def hot_threads(request):
@@ -529,17 +533,23 @@ def hot_threads(request):
     posts = (
         Post.objects.filter(is_deleted=False)
         .annotate(
-            likes_count=Count('interactions', filter=Q(interactions__interaction_type='like')),
-            comments_count=Count('comments')
+            likes_count=Count(
+                "interactions", filter=Q(interactions__interaction_type="like")
+            ),
+            comments_count=Count("comments"),
         )
-        .annotate(total_score=Count('interactions', filter=Q(interactions__interaction_type='like')) + Count('comments'))
-        .order_by('-total_score', '-created_at')[:50]
+        .annotate(
+            total_score=Count(
+                "interactions", filter=Q(interactions__interaction_type="like")
+            )
+            + Count("comments")
+        )
+        .order_by("-total_score", "-created_at")[:50]
     )
 
-    return render(request, 'post/hot_threads.html', {
-        'posts': posts,
-        'page_title': 'Hot Threads'
-    })
+    return render(
+        request, "post/hot_threads.html", {"posts": posts, "page_title": "Hot Threads"}
+    )
 
 
 @login_required
@@ -547,17 +557,24 @@ def bookmarked_threads(request):
     """
     Menampilkan postingan yang telah disimpan oleh pengguna (bookmark)
     """
-    saves = PostSave.objects.filter(user=request.user).select_related('post').order_by('-created_at')
+    saves = (
+        PostSave.objects.filter(user=request.user)
+        .select_related("post")
+        .order_by("-created_at")
+    )
     posts = [s.post for s in saves if not s.post.is_deleted]
 
-    return render(request, 'post/bookmarked_threads.html', {
-        'posts': posts,
-        'page_title': 'Bookmarks'
-    })
+    return render(
+        request,
+        "post/bookmarked_threads.html",
+        {"posts": posts, "page_title": "Bookmarks"},
+    )
+
 
 def recent_thread(request):
-    posts = Post.objects.filter(is_deleted=False).order_by('-created_at')[:50]
-    return render(request, 'post/recent_threads.html', {
-        'posts': posts,
-        'page_title': 'Recent Threads'
-    })
+    posts = Post.objects.filter(is_deleted=False).order_by("-created_at")[:50]
+    return render(
+        request,
+        "post/recent_threads.html",
+        {"posts": posts, "page_title": "Recent Threads"},
+    )
