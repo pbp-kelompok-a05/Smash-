@@ -33,6 +33,12 @@ class PostAPIView(View):
         is_owner = post and post.user == user if post else False
         is_superuser = user.is_superuser or user.has_perm("post.manage_all_posts")
         return is_owner, is_superuser
+    
+    # TAMBAH FUNGSI UNTUK SEARCH POST
+    def search_posts(request):
+        query = request.GET.get('q', '')
+        posts = Post.objects.filter(content__icontains=query)
+        return render(request, 'post/search_results.html', {'posts': posts, 'query': query})
 
     def get(self, request, post_id=None):
         """
