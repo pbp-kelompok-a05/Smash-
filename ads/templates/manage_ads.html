@@ -1,150 +1,414 @@
 {% extends 'base.html' %}
-{% load static %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 py-10 space-y-10">
-
-  <!-- 🔹 HEADER -->
-  <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+<style>
+/* Sharp corners + zero borders across this page (and edit modal) */
+#ads-manage,
+#ads-manage *,
+#ads-manage *::before,
+#ads-manage *::after,
+#editModal,
+#editModal *,
+#editModal *::before,
+#editModal *::after {
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-width: 0 !important;
+}
+</style>
+<div id="ads-manage" class="max-w-7xl mx-auto py-10 space-y-8">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
-        📢 Kelola Iklan
-      </h1>
-      <p class="text-gray-500 mt-1">
-        Tambahkan, ubah, atau hapus iklan yang akan ditampilkan ke pengguna.
-      </p>
+      <h1 class="text-3xl font-bold text-gray-900">Manage Ads</h1>
+      <p class="text-gray-500">Create, edit, and manage ads for your site.</p>
     </div>
-    <a href="#form-section" class="mt-4 md:mt-0 bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 transition">
-      + Tambah Iklan
-    </a>
+    <div class="flex items-center gap-2 text-sm text-gray-500">
+      <span class="hidden sm:block">Dashboard</span>
+      <span class="hidden sm:block">/</span>
+      <span class="font-medium text-gray-700">Ads</span>
+    </div>
   </div>
 
-  <!-- 🔹 FORM TAMBAH IKLAN -->
-  <section id="form-section" class="bg-white border border-gray-100 rounded-2xl shadow-sm p-8">
-    <h2 class="text-xl font-semibold text-gray-800 mb-5 flex items-center gap-2">
-      🧾 Form Tambah Iklan
-    </h2>
+  <!-- Metrics -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wider text-gray-500">Total Ads</p>
+      <p id="statTotal" class="mt-2 text-2xl font-semibold text-gray-800">0</p>
+    </div>
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wider text-gray-500">Active</p>
+      <p id="statActive" class="mt-2 text-2xl font-semibold text-emerald-600">0</p>
+    </div>
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wider text-gray-500">Inline</p>
+      <p id="statInline" class="mt-2 text-2xl font-semibold text-blue-600">0</p>
+    </div>
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase tracking-wider text-gray-500">Pop-up</p>
+      <p id="statPopup" class="mt-2 text-2xl font-semibold text-violet-600">0</p>
+    </div>
+  </section>
 
-    <form id="ad-form" method="POST" enctype="multipart/form-data" class="space-y-5">
+  <!-- Create form -->
+  <section class="bg-white p-6 rounded-xl shadow border">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Create Ad</h2>
+    <form id="createAdForm" method="POST" onsubmit="event.preventDefault();" enctype="multipart/form-data" class="space-y-5">
       {% csrf_token %}
-      <div class="grid md:grid-cols-2 gap-6">
-
-        <!-- Gaya baru: border dan spacing untuk tiap field -->
-        {% for field in form %}
-        <div class="flex flex-col">
-          <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700 mb-1">
-            {{ field.label }}
-          </label>
-          <div class="border border-gray-300 rounded-lg shadow-sm p-2.5 focus-within:ring-2 focus-within:ring-blue-500 transition">
-            {{ field }}
-          </div>
-          {% if field.help_text %}
-            <p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>
-          {% endif %}
-          {% for error in field.errors %}
-            <p class="text-xs text-red-500 mt-1">⚠ {{ error }}</p>
-          {% endfor %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="space-y-1">
+          <label for="title" class="text-sm font-medium text-gray-700">Title *</label>
+          <input name="title" id="title" type="text" required class="border p-2 rounded-md w-full" placeholder="e.g. Year End Promo">
         </div>
-        {% endfor %}
+        <div class="space-y-1 md:col-span-2">
+          <label for="description" class="text-sm font-medium text-gray-700">Description (optional)</label>
+          <textarea name="description" id="description" rows="3" class="border p-2 rounded-md w-full" placeholder="Write a short advertisement description..."></textarea>
+        </div>
+        <div class="space-y-1">
+          <label for="link" class="text-sm font-medium text-gray-700">Link Promotion*</label>
+          <input name="link" id="link" type="url" required class="border p-2 rounded-md w-full" placeholder="https://example.com">
+        </div>
+        <div class="space-y-1">
+          <label for="ad_type" class="text-sm font-medium text-gray-700">Ad Type *</label>
+          <select name="ad_type" id="ad_type" required class="border p-2 rounded-md w-full">
+            <option value="inline">Inline</option>
+            <option value="popup">Pop-up</option>
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label for="popup_delay_seconds" class="text-sm font-medium text-gray-700">Popup Delay (seconds) *</label>
+          <input name="popup_delay_seconds" id="popup_delay_seconds" type="number" min="0" value="5" required class="border p-2 rounded-md w-full">
+        </div>
+        <div class="space-y-1">
+          <label for="image" class="text-sm font-medium text-gray-700">Image *</label>
+          <input name="image" id="image" type="file" accept="image/*" required class="border p-2 rounded-md w-full">
+        </div>
+        <div class="space-y-1">
+          <label for="is_active" class="text-sm font-medium text-gray-700">Status *</label>
+          <select name="is_active" id="is_active" class="border p-2 rounded-md w-full">
+            <option value="true" selected>Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </div>
       </div>
-
-      <div class="pt-3">
-        <button type="submit"
-                class="bg-blue-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-blue-700 shadow hover:shadow-md transition">
-          Simpan Iklan
-        </button>
-        <p id="form-message" class="text-sm mt-3"></p>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="bg-black text-white px-4 py-2 rounded-md hover:bg-neutral-900 transition">Save</button>
+        <p id="statusMsg" class="text-sm"></p>
       </div>
     </form>
   </section>
 
-  <!-- 🔹 DAFTAR IKLAN -->
-  <section class="bg-white border border-gray-100 rounded-2xl shadow-sm p-8">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-        📋 Daftar Iklan
-      </h2>
-      <span class="text-sm text-gray-500">{{ ads|length }} total iklan</span>
+  <!-- List -->
+  <section>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold text-gray-800">Ads List</h2>
     </div>
-
-    <div id="ads-container">
-      {% if ads %}
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {% for ad in ads %}
-            {% include 'partials/ad_card.html' %}
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="text-center text-gray-500 py-10 italic">
-          Belum ada iklan yang ditambahkan.
-        </div>
-      {% endif %}
-    </div>
+    <div id="adsContainer" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    <template id="emptyState">
+      <div class="col-span-full border rounded-xl bg-white p-10 text-center text-gray-500">
+        No ads yet. Add a new one above.
+      </div>
+    </template>
   </section>
 </div>
-{% endblock %}
 
-{% block extra_scripts %}
+<!-- MODAL EDIT -->
+<div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="flex items-center justify-between px-5 py-3 border-b">
+      <h3 class="text-lg font-semibold text-gray-800">Edit Ad</h3>
+      <button type="button" id="closeModal" class="text-gray-400 hover:text-gray-600" aria-label="Close">&times;</button>
+    </div>
+    <form id="editForm" class="px-5 pb-5 pt-2 space-y-4 max-h-[75vh] overflow-y-auto">
+      {% csrf_token %}
+      <input type="hidden" id="editId">
+
+      
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-gray-700">Title *</label>
+          <input id="editTitle" type="text" required class="w-full border rounded-md p-2 focus:ring focus:ring-blue-500">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-medium text-gray-700">Link *</label>
+            <input id="editLink" type="url" placeholder="https://example.com" required class="w-full border rounded-md p-2 focus:ring focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700">Ad Type *</label>
+            <select id="editType" required class="w-full border rounded-md p-2">
+              <option value="inline">Inline</option>
+              <option value="popup">Pop-up</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-medium text-gray-700">Delay (seconds) *</label>
+            <input id="editDelay" type="number" min="0" required class="w-full border rounded-md p-2 focus:ring focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700">Status *</label>
+            <select id="editActive" required class="w-full border rounded-md p-2">
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">Description</label>
+          <textarea id="editDescription" rows="2" class="w-full border rounded-md p-2 focus:ring focus:ring-blue-500"></textarea>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">Image (optional)</label>
+          <input id="editImage" type="file" accept="image/*" class="w-full border rounded-md p-2">
+          <p class="text-xs text-gray-400 mt-1">Leave empty if you do not want to change the image</p>
+        </div>
+
+        <!-- Bottom action bar -->
+        <div class="pt-3 mt-2 -mx-5 px-5 border-t flex justify-end gap-2">
+          <button type="button" id="cancelEdit" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-300">Cancel</button>
+          <button type="submit" class="bg-black text-white px-3 py-1.5 rounded-md hover:bg-neutral-900">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const adsContainer = document.getElementById("ads-container");
-  const editModal = document.getElementById("edit-modal");
-  const editForm = document.getElementById("edit-form");
+// ============================
+// DOM ELEMENTS
+// ============================
+const editModal = document.getElementById("editModal");
+const editForm = document.getElementById("editForm");
+const createAdForm = document.getElementById("createAdForm");
+const statusMsg = document.getElementById("statusMsg");
+const adsContainer = document.getElementById("adsContainer");
+const statTotal = document.getElementById("statTotal");
+const statActive = document.getElementById("statActive");
+const statInline = document.getElementById("statInline");
+const statPopup = document.getElementById("statPopup");
 
-  // DELETE
-  adsContainer.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".delete-ad");
-    if (!btn) return;
-    e.preventDefault();
-    if (!confirm("Yakin hapus iklan ini?")) return;
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
 
-    const res = await fetch(btn.dataset.url, {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": "{{ csrf_token }}",
-        "X-Requested-With": "XMLHttpRequest"
-      },
+function closeModal() {
+  editModal.classList.add("hidden");
+  editModal.classList.remove("flex");
+  editForm.reset();
+}
+
+// ============================
+// API BASE (resolved by Django)
+// ============================
+const API_BASE = "{% url 'ad_list' %}"; // e.g. "/ads/api/"
+
+// ============================
+// LOAD ADS
+// ============================
+async function loadAds() {
+  try {
+    const res = await fetch(API_BASE);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    adsContainer.innerHTML = "";
+
+    if (!data.ads || data.ads.length === 0) {
+      const tpl = document.getElementById("emptyState");
+      if (tpl) adsContainer.appendChild(tpl.content.cloneNode(true));
+      if (statTotal) statTotal.textContent = 0;
+      if (statActive) statActive.textContent = 0;
+      if (statInline) statInline.textContent = 0;
+      if (statPopup) statPopup.textContent = 0;
+      return;
+    }
+
+    // Metrics
+    const totals = {
+      total: data.ads.length,
+      active: data.ads.filter(a => a.is_active).length,
+      inline: data.ads.filter(a => a.ad_type === 'inline').length,
+      popup: data.ads.filter(a => a.ad_type === 'popup').length,
+    };
+    if (statTotal) statTotal.textContent = totals.total;
+    if (statActive) statActive.textContent = totals.active;
+    if (statInline) statInline.textContent = totals.inline;
+    if (statPopup) statPopup.textContent = totals.popup;
+
+    data.ads.forEach(ad => {
+      adsContainer.innerHTML += `
+        <div class="relative border rounded-xl shadow hover:shadow-md p-4 bg-white" data-id="${ad.id}" data-link="${ad.link ? ad.link : ''}">
+          <div class="absolute right-2 top-2 flex gap-1">
+            <button onclick=\"openEdit(${ad.id})\" aria-label=\"Edit\" class=\"p-2 rounded-lg bg-white/90 border hover:bg-white shadow\">
+              <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" class=\"w-4 h-4 text-yellow-600\"><path d=\"M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712Z\"/><path d=\"M3 17.25V21h3.75L17.81 9.94l-3.712-3.712L3 17.25Z\"/></svg>
+            </button>
+            <button onclick=\"deleteAd(${ad.id})\" aria-label=\"Delete\" class=\"p-2 rounded-lg bg-white/90 border hover:bg-white shadow\">
+              <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" class=\"w-4 h-4 text-red-600\"><path d=\"M6 7h12M9 7v10m6-10v10M4 7h16l-1 13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 7Zm5-3h6a1 1 0 0 1 1 1v2H8V5a1 1 0 0 1 1-1Z\"/></svg>
+            </button>
+          </div>
+
+          ${ad.image ? `<img src=\"${ad.image}\" class=\"w-full h-32 object-cover rounded-md mb-3\">` : ""}
+          <h3 class=\"font-semibold text-gray-800 pr-10\">${ad.title}</h3>
+          ${ad.link ? `<a href=\"${ad.link}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-xs text-blue-600 underline\">Preview</a>` : `<p class=\"text-xs text-gray-400\">No link</p>`}
+
+          <div class=\"mt-2 flex items-center gap-2 text-xs\">
+            <span class=\"px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border\">${ad.ad_type}</span>
+            ${ad.is_active ? `<span class=\"px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200\">Active</span>` : `<span class=\"px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border\">Inactive</span>`}
+            <span class=\"text-gray-500\">Delay: ${(ad.popup_delay_seconds || 0)}s</span>
+          </div>
+        </div>`;
+    });
+  } catch (error) {
+    console.error("Error loading ads:", error);
+    alert("Failed to load ads");
+  }
+}
+
+// ============================
+// CREATE AD
+// ============================
+createAdForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    const formData = new FormData(e.target);
+    const res = await fetch(API_BASE, { method: "POST", body: formData });
+    const data = await res.json();
+
+    if (data.status === "success") {
+      statusMsg.textContent = "Success: " + data.message;
+      statusMsg.className = "text-sm mt-2 text-green-600";
+      e.target.reset();
+      loadAds();
+    } else {
+      statusMsg.textContent = "Error: " + (data.message || "Failed to create ad");
+      statusMsg.className = "text-sm mt-2 text-red-600";
+    }
+  } catch (error) {
+    statusMsg.textContent = "Error: Network error";
+    statusMsg.className = "text-sm mt-2 text-red-600";
+  }
+});
+
+// ============================
+// DELETE AD
+// ============================
+async function deleteAd(id) {
+  if (!confirm("Are you sure you want to delete this ad?")) return;
+  try {
+    const res = await fetch(`${API_BASE}${id}/`, {
+      method: "DELETE",
+      headers: { "X-CSRFToken": getCsrfToken() },
     });
     const data = await res.json();
-    if (data.success) btn.closest("[data-id]").remove();
-    else alert("Gagal menghapus iklan.");
-  });
+    alert(data.message || "Ad deleted successfully");
+    loadAds();
+  } catch (error) {
+    alert("Failed to delete ad");
+  }
+}
 
-  // EDIT (buka modal)
-  adsContainer.addEventListener("click", (e) => {
-    const btn = e.target.closest(".edit-ad");
-    if (!btn) return;
-    e.preventDefault();
+// ============================
+// OPEN EDIT MODAL
+// ============================
+async function openEdit(id) {
+  try {
+    const res = await fetch(`${API_BASE}${id}/`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ad = await res.json();
+
+    document.getElementById("editId").value = id;
+    document.getElementById("editTitle").value = ad.title || "";
+    document.getElementById("editDescription").value = ad.description || "";
+    document.getElementById("editLink").value = ad.link || "";
+    document.getElementById("editType").value = ad.ad_type || "inline";
+    document.getElementById("editDelay").value = ad.popup_delay_seconds || 0;
+    document.getElementById("editActive").value = ad.is_active ? "true" : "false";
+
+    // Require image only if none exists on the ad
+    const imageInput = document.getElementById("editImage");
+    if (ad.image) {
+      imageInput.required = false;
+    } else {
+      imageInput.required = true;
+    }
+
     editModal.classList.remove("hidden");
     editModal.classList.add("flex");
+  } catch (error) {
+    console.error("Error loading ad:", error);
+    alert("Failed to load ad");
+  }
+}
 
-    editForm.dataset.url = btn.dataset.url;
-    document.getElementById("edit-id").value = btn.dataset.id;
-    document.getElementById("edit-title").value = btn.dataset.title;
-    document.getElementById("edit-link").value = btn.dataset.link;
-    document.getElementById("edit-delay").value = btn.dataset.delay;
-  });
+// ============================
+// SUBMIT EDIT
+// ============================
+editForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const id = document.getElementById("editId").value;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
 
-  // SUBMIT EDIT
-  editForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const formData = new FormData(editForm);
-    const res = await fetch(editForm.dataset.url, {
+  try {
+    submitBtn.textContent = "Saving...";
+    submitBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append("title", document.getElementById("editTitle").value);
+    formData.append("description", document.getElementById("editDescription").value);
+    formData.append("link", document.getElementById("editLink").value);
+    formData.append("ad_type", document.getElementById("editType").value);
+    formData.append("popup_delay_seconds", document.getElementById("editDelay").value);
+    // Send as string "true"/"false"
+    formData.append("is_active", document.getElementById("editActive").value);
+
+    const imageFile = document.getElementById("editImage").files[0];
+    if (imageFile) formData.append("image", imageFile);
+
+    const res = await fetch(`${API_BASE}${id}/update/`, {
       method: "POST",
       body: formData,
-      headers: { "X-Requested-With": "XMLHttpRequest" },
+      headers: { "X-CSRFToken": getCsrfToken() },
     });
-    const data = await res.json();
-    if (data.success) {
-      const card = document.querySelector(`[data-id="${data.id}"]`);
-      card.outerHTML = data.html;
-      editModal.classList.add("hidden");
-    } else alert("Gagal menyimpan perubahan.");
-  });
 
-  // CLOSE MODAL
-  document.getElementById("close-modal")?.addEventListener("click", () => {
-    editModal.classList.add("hidden");
-  });
+    const data = await res.json();
+    if (data.status === "success") {
+      alert(data.message);
+      closeModal();
+      loadAds();
+    } else {
+      alert(data.message || "Failed to update ad");
+    }
+  } catch (error) {
+    console.error("Error updating ad:", error);
+    alert("Network error");
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+  }
 });
+
+// ============================
+// MODAL CLOSE HANDLERS
+// ============================
+document.getElementById("closeModal").addEventListener("click", closeModal);
+document.getElementById("cancelEdit").addEventListener("click", closeModal);
+editModal.addEventListener("click", (e) => {
+  if (e.target === editModal) closeModal();
+});
+
+// No card-wide redirect; use explicit Preview link
+
+// ============================
+// INIT
+// ============================
+loadAds();
+window.openEdit = openEdit;
+window.deleteAd = deleteAd;
 </script>
 {% endblock %}
