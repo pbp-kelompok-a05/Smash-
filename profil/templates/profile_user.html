@@ -622,6 +622,8 @@
                       if (data.status === 'success') {
                           likesCount.textContent = data.likes_count;
                           dislikesCount.textContent = data.dislikes_count;
+                          toggleLikeButtonView(this, data.user_interaction === 'like');
+                          toggleDislikeButtonView(dislikeBtn, false);
                           
                           // Update button states
                           if (data.action === 'liked') {
@@ -669,6 +671,8 @@
                       if (data.status === 'success') {
                           likesCount.textContent = data.likes_count;
                           dislikesCount.textContent = data.dislikes_count;
+                          toggleLikeButtonView(this, data.user_interaction === 'like');
+                          toggleDislikeButtonView(dislikeBtn, false);
                           
                           // Update button states
                           if (data.action === 'disliked') {
@@ -722,6 +726,22 @@
               });
           });
       }
+  function toggleLikeButtonView(likeBtn, isActive) {
+      const likeIcon = likeBtn.querySelector('.like-icon');
+      const likeText = likeBtn.querySelector('.like-text');
+      
+      if (isActive) {
+          likeBtn.classList.add('text-pink-600');
+          likeBtn.classList.remove('text-gray-600');
+          likeIcon.classList.add('fill-pink-600');
+          likeText.textContent = 'Liked';
+      } else {
+          likeBtn.classList.remove('text-pink-600');
+          likeBtn.classList.add('text-gray-600');
+          likeIcon.classList.remove('fill-pink-600');
+          likeText.textContent = 'Like';
+      }
+  }
   function toggleDislikeButtonView(dislikeBtn, isActive) {
       const dislikeIcon = dislikeBtn.querySelector('.dislike-icon');
       const dislikeText = dislikeBtn.querySelector('.dislike-text');
