@@ -65,4 +65,8 @@ urlpatterns = [
     path('admin/bulk-delete/', 
          views.ReportAPIView.as_view(), 
          name='admin-report-bulk-delete'),
+
+    path('api/reports/', views.ReportAPIView.as_view(), name='report-api'),
+    path('api/reports/<int:report_id>/', views.ReportAPIView.as_view(), name='report-detail'),
+    path('api/reports/stats/', views.ReportStatsView.as_view(), name='report-stats'),
 ]
