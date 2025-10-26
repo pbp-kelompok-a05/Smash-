@@ -1,0 +1,188 @@
+{% comment %}
+<!-- 
+Nama File: templates/report/create_report.html
+Deskripsi: Template untuk form pembuatan laporan baru
+Fungsi: Menampilkan form untuk melaporkan post/komentar
+Target: User terautentikasi
+-->
+{% endcomment %}
+
+{% extends "report/base.html" %}
+{% load static %}
+
+{% block report_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="report-card">
+            <div class="report-card-header">
+                <h3 class="mb-0">
+                    <i class="fas fa-flag"></i> Laporkan Konten
+                </h3>
+            </div>
+            
+            <div class="report-card-body">
+                <!-- Informasi konten yang dilaporkan -->
+                <div id="reported-content-info" class="mb-4 p-3 bg-light rounded" style="display: none;">
+                    <h5>Konten yang Dilaporkan:</h5>
+                    <div id="content-preview"></div>
+                </div>
+                
+                <!-- Form Laporan -->
+                <form id="report-create-form" method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Hidden fields untuk ID konten -->
+                    {{ form.post_id }}
+                    {{ form.comment_id }}
+                    
+                    <!-- Kategori Laporan -->
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            <strong>{{ form.category.label }}</strong>
+                        </label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.category.errors %}
+                            <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if form.category.help_text %}
+                        <div class="form-text">{{ form.category.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Deskripsi Tambahan -->
+                    <div class="mb-4">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <strong>{{ form.description.label }}</strong>
+                        </label>
+                        {{ form.description }}
+                        <div class="form-text text-end">
+                            <span id="char-count">0</span>/500 karakter
+                        </div>
+                        {% if form.description.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.description.errors %}
+                            <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if form.description.help_text %}
+                        <div class="form-text">{{ form.description.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Tombol Aksi -->
+                    <div class="d-flex justify-content-between">
+                        <a href="javascript:history.back()" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Kembali
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submit-report-btn">
+                            <i class="fas fa-paper-plane"></i> Kirim Laporan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Informasi Penting -->
+        <div class="alert alert-info mt-4">
+            <h6><i class="fas fa-info-circle"></i> Informasi Penting:</h6>
+            <ul class="mb-0">
+                <li>Laporan akan ditinjau oleh tim admin dalam waktu 24-48 jam</li>
+                <li>Pastikan laporan Anda sesuai dengan kategori yang tersedia</li>
+                <li>Laporan yang tidak sesuai fakta dapat berakibat pada akun Anda</li>
+                <li>Anda tidak dapat melaporkan konten sendiri</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        // Update karakter counter
+        $('#{{ form.description.id_for_label }}').on('input', function() {
+            const count = $(this).val().length;
+            $('#char-count').text(count);
+        });
+        
+        // Tampilkan preview konten yang dilaporkan
+        function showContentPreview() {
+            const postId = $('#{{ form.post_id.id_for_label }}').val();
+            const commentId = $('#{{ form.comment_id.id_for_label }}').val();
+            
+            if (postId) {
+                // Ambil data post via AJAX
+                $.get(`/api/posts/${postId}/`, function(data) {
+                    if (data.status === 'success') {
+                        $('#content-preview').html(`
+                            <strong>Post:</strong> "${data.post.title}"
+                            <br><small>Oleh: ${data.post.user.username}</small>
+                        `);
+                        $('#reported-content-info').show();
+                    }
+                }).fail(function() {
+                    $('#content-preview').html('<em>Informasi post tidak dapat dimuat</em>');
+                    $('#reported-content-info').show();
+                });
+            } else if (commentId) {
+                // Ambil data comment via AJAX
+                $.get(`/api/comments/${commentId}/`, function(data) {
+                    if (data.status === 'success') {
+                        $('#content-preview').html(`
+                            <strong>Komentar:</strong> "${data.comment.content.substring(0, 100)}..."
+                            <br><small>Oleh: ${data.comment.user.username} pada post: "${data.comment.post_title}"</small>
+                        `);
+                        $('#reported-content-info').show();
+                    }
+                }).fail(function() {
+                    $('#content-preview').html('<em>Informasi komentar tidak dapat dimuat</em>');
+                    $('#reported-content-info').show();
+                });
+            }
+        }
+        
+        showContentPreview();
+        
+        // Handle form submission dengan AJAX
+        $('#report-create-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = $('#submit-report-btn');
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Mengirim...');
+            
+            $.ajax({
+                url: '/api/reports/',
+                method: 'POST',
+                data: JSON.stringify({
+                    category: $('#{{ form.category.id_for_label }}').val(),
+                    description: $('#{{ form.description.id_for_label }}').val(),
+                    post_id: $('#{{ form.post_id.id_for_label }}').val(),
+                    comment_id: $('#{{ form.comment_id.id_for_label }}').val()
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        ReportUtils.showNotification(response.message, 'success');
+                        setTimeout(() => {
+                            window.location.href = "{% url 'home' %}";
+                        }, 2000);
+                    } else {
+                        ReportUtils.showNotification(response.message, 'error');
+                        submitBtn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Kirim Laporan');
+                    }
+                },
+                error: function(xhr) {
+                    ReportUtils.handleAjaxError(xhr);
+                    submitBtn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Kirim Laporan');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

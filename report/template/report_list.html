@@ -1,0 +1,553 @@
+{% comment %}
+<!-- 
+Nama File: templates/report/report_list.html
+Deskripsi: Template untuk menampilkan daftar laporan (admin only)
+Fungsi: Dashboard admin untuk mengelola laporan dengan filter dan pagination
+Target: Superuser/Admin
+-->
+{% endcomment %}
+
+{% extends "report/base.html" %}
+{% load static %}
+
+{% block report_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-flag"></i> Manajemen Laporan</h2>
+    <a href="{% url 'report_stats' %}" class="btn btn-info">
+        <i class="fas fa-chart-bar"></i> Lihat Statistik
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="report-card mb-4">
+    <div class="report-card-header">
+        <h5 class="mb-0"><i class="fas fa-filter"></i> Filter Laporan</h5>
+    </div>
+    <div class="report-card-body">
+        <form id="report-filter-form">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="filter-status-select" class="form-label">Status</label>
+                    <select id="filter-status-select" class="form-select">
+                        <option value="">Semua Status</option>
+                        <option value="PENDING">Menunggu Review</option>
+                        <option value="REVIEWED">Ditinjau</option>
+                        <option value="RESOLVED">Selesai</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-category-select" class="form-label">Kategori</label>
+                    <select id="filter-category-select" class="form-select">
+                        <option value="">Semua Kategori</option>
+                        <option value="SARA">Konten SARA</option>
+                        <option value="SPAM">Spam</option>
+                        <option value="NSFW">Konten Tidak Senonoh</option>
+                        <option value="OTHER">Lainnya</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-date-from" class="form-label">Dari Tanggal</label>
+                    <input type="date" id="filter-date-from" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-date-to" class="form-label">Sampai Tanggal</label>
+                    <input type="date" id="filter-date-to" class="form-control">
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Terapkan Filter
+                </button>
+                <button type="button" id="reset-filters" class="btn btn-outline-secondary">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistics Quick View -->
+<div class="row mb-4" id="quick-stats">
+    <!-- Stats akan di-load via AJAX -->
+</div>
+
+<!-- Reports Table -->
+<div class="report-card">
+    <div class="report-card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-list"></i> Daftar Laporan</h5>
+        <div id="report-count" class="badge bg-primary">Memuat...</div>
+    </div>
+    <div class="report-card-body">
+        <div id="reports-table-container">
+            <!-- Table akan di-load via AJAX -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Memuat laporan...</span>
+                </div>
+                <p class="mt-2">Memuat daftar laporan...</p>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination-container" id="pagination-container">
+            <!-- Pagination akan di-generate via JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal untuk Detail Laporan -->
+<div class="modal fade" id="reportDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Laporan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="report-detail-content">
+                <!-- Konten detail akan di-load via AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    class ReportManager {
+        constructor() {
+            this.currentPage = 1;
+            this.perPage = 20;
+            this.filters = {
+                status: '',
+                category: '',
+                date_from: '',
+                date_to: ''
+            };
+            this.init();
+        }
+        
+        init() {
+            this.loadReports();
+            this.loadQuickStats();
+            this.bindEvents();
+        }
+        
+        bindEvents() {
+            // Filter form submission
+            $('#report-filter-form').on('submit', (e) => {
+                e.preventDefault();
+                this.updateFilters();
+                this.currentPage = 1;
+                this.loadReports();
+            });
+            
+            // Reset filters
+            $('#reset-filters').on('click', () => {
+                $('#report-filter-form')[0].reset();
+                this.filters = {
+                    status: '',
+                    category: '',
+                    date_from: '',
+                    date_to: ''
+                };
+                this.currentPage = 1;
+                this.loadReports();
+            });
+            
+            // Pagination click handler (delegated)
+            $(document).on('click', '.page-link', (e) => {
+                e.preventDefault();
+                const page = $(e.target).data('page');
+                if (page) {
+                    this.currentPage = page;
+                    this.loadReports();
+                }
+            });
+        }
+        
+        updateFilters() {
+            this.filters = {
+                status: $('#filter-status-select').val(),
+                category: $('#filter-category-select').val(),
+                date_from: $('#filter-date-from').val(),
+                date_to: $('#filter-date-to').val()
+            };
+        }
+        
+        loadReports() {
+            const params = new URLSearchParams({
+                page: this.currentPage,
+                per_page: this.perPage,
+                ...this.filters
+            });
+            
+            $.get(`/api/reports/?${params}`)
+                .done(this.renderReports.bind(this))
+                .fail(ReportUtils.handleAjaxError);
+        }
+        
+        renderReports(data) {
+            if (data.status !== 'success') {
+                ReportUtils.showNotification('Gagal memuat laporan', 'error');
+                return;
+            }
+            
+            // Update report count
+            $('#report-count').text(`${data.pagination.total} Laporan`);
+            
+            // Render table
+            if (data.reports.length === 0) {
+                $('#reports-table-container').html(`
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Tidak ada laporan yang sesuai dengan filter</p>
+                    </div>
+                `);
+                $('#pagination-container').empty();
+                return;
+            }
+            
+            let tableHtml = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Pelapor</th>
+                                <th>Kategori</th>
+                                <th>Konten</th>
+                                <th>Status</th>
+                                <th>Tanggal</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.reports.forEach(report => {
+                const statusClass = `status-${report.status.toLowerCase()}`;
+                tableHtml += `
+                    <tr>
+                        <td>#${report.id}</td>
+                        <td>${report.reporter}</td>
+                        <td>
+                            <span class="report-category-badge bg-secondary text-white">
+                                ${report.category}
+                            </span>
+                        </td>
+                        <td>${report.content_preview || '-'}</td>
+                        <td>
+                            <span class="report-status-badge ${statusClass}">
+                                ${report.status}
+                            </span>
+                        </td>
+                        <td>${ReportUtils.formatDate(report.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary view-report" data-id="${report.id}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-report" data-id="${report.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            $('#reports-table-container').html(tableHtml);
+            
+            // Render pagination
+            this.renderPagination(data.pagination);
+            
+            // Bind action buttons
+            this.bindActionButtons();
+        }
+        
+        renderPagination(pagination) {
+            if (pagination.total <= pagination.per_page) {
+                $('#pagination-container').empty();
+                return;
+            }
+            
+            let paginationHtml = '<nav><ul class="pagination">';
+            
+            // Previous button
+            if (this.currentPage > 1) {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${this.currentPage - 1}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                `;
+            }
+            
+            // Page numbers
+            const totalPages = Math.ceil(pagination.total / pagination.per_page);
+            const startPage = Math.max(1, this.currentPage - 2);
+            const endPage = Math.min(totalPages, this.currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const active = i === this.currentPage ? 'active' : '';
+                paginationHtml += `
+                    <li class="page-item ${active}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+            
+            // Next button
+            if (pagination.has_next) {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${this.currentPage + 1}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                `;
+            }
+            
+            paginationHtml += '</ul></nav>';
+            $('#pagination-container').html(paginationHtml);
+        }
+        
+        bindActionButtons() {
+            // View report detail
+            $('.view-report').on('click', (e) => {
+                const reportId = $(e.currentTarget).data('id');
+                this.showReportDetail(reportId);
+            });
+            
+            // Delete report
+            $('.delete-report').on('click', (e) => {
+                const reportId = $(e.currentTarget).data('id');
+                this.deleteReport(reportId);
+            });
+        }
+        
+        showReportDetail(reportId) {
+            $.get(`/api/reports/${reportId}/`)
+                .done((data) => {
+                    if (data.status === 'success') {
+                        this.renderReportDetail(data.report);
+                        $('#reportDetailModal').modal('show');
+                    }
+                })
+                .fail(ReportUtils.handleAjaxError);
+        }
+        
+        renderReportDetail(report) {
+            const statusClass = `status-${report.status.toLowerCase()}`;
+            const categoryClass = `bg-secondary text-white`;
+            
+            let contentHtml = '';
+            if (report.content_type === 'post') {
+                contentHtml = `
+                    <h6>Post yang Dilaporkan:</h6>
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6>${report.content_data.title}</h6>
+                            <p class="mb-1">${report.content_data.content_preview}</p>
+                            <small class="text-muted">Oleh: ${report.content_data.user}</small>
+                        </div>
+                    </div>
+                `;
+            } else if (report.content_type === 'comment') {
+                contentHtml = `
+                    <h6>Komentar yang Dilaporkan:</h6>
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <p class="mb-1">${report.content_data.content}</p>
+                            <small class="text-muted">
+                                Oleh: ${report.content_data.user} | 
+                                Post: "${report.content_data.post_title}"
+                            </small>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            $('#report-detail-content').html(`
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Pelapor:</strong> ${report.reporter} (ID: ${report.reporter_id})
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong> 
+                        <span class="report-status-badge ${statusClass}">${report.status_display}</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Kategori:</strong> 
+                        <span class="report-category-badge ${categoryClass}">${report.category_display}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Tanggal Lapor:</strong> ${ReportUtils.formatDate(report.created_at)}
+                    </div>
+                </div>
+                ${report.reviewed_at ? `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Ditinjau Oleh:</strong> ${report.reviewed_by || '-'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Tanggal Tinjau:</strong> ${ReportUtils.formatDate(report.reviewed_at)}
+                    </div>
+                </div>
+                ` : ''}
+                <div class="mb-3">
+                    <strong>Deskripsi Laporan:</strong>
+                    <p class="mt-1">${report.description || '<em>Tidak ada deskripsi tambahan</em>'}</p>
+                </div>
+                ${contentHtml}
+                <div class="mt-4">
+                    <button class="btn btn-primary update-status" data-id="${report.id}">
+                        <i class="fas fa-edit"></i> Update Status
+                    </button>
+                </div>
+            `);
+            
+            // Bind update status button
+            $('.update-status').on('click', () => {
+                this.showStatusUpdateModal(report.id, report.status);
+            });
+        }
+        
+        showStatusUpdateModal(reportId, currentStatus) {
+            // Implementasi modal untuk update status
+            const newStatus = prompt('Masukkan status baru (PENDING, REVIEWED, RESOLVED):', currentStatus);
+            if (newStatus && ['PENDING', 'REVIEWED', 'RESOLVED'].includes(newStatus.toUpperCase())) {
+                this.updateReportStatus(reportId, newStatus.toUpperCase());
+            }
+        }
+        
+        updateReportStatus(reportId, newStatus) {
+            $.ajax({
+                url: `/api/reports/${reportId}/`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ status: newStatus }),
+                success: (response) => {
+                    if (response.status === 'success') {
+                        ReportUtils.showNotification(response.message, 'success');
+                        $('#reportDetailModal').modal('hide');
+                        this.loadReports();
+                        this.loadQuickStats();
+                    }
+                },
+                error: ReportUtils.handleAjaxError
+            });
+        }
+        
+        deleteReport(reportId) {
+            if (!confirm('Apakah Anda yakin ingin menghapus laporan ini?')) return;
+            
+            $.ajax({
+                url: `/api/reports/${reportId}/`,
+                method: 'DELETE',
+                success: (response) => {
+                    if (response.status === 'success') {
+                        ReportUtils.showNotification(response.message, 'success');
+                        this.loadReports();
+                        this.loadQuickStats();
+                    }
+                },
+                error: ReportUtils.handleAjaxError
+            });
+        }
+        
+        loadQuickStats() {
+            $.get('/api/reports/stats/')
+                .done((data) => {
+                    if (data.status === 'success') {
+                        this.renderQuickStats(data.statistics);
+                    }
+                })
+                .fail(() => {
+                    // Silent fail untuk stats
+                });
+        }
+        
+        renderQuickStats(stats) {
+            $('#quick-stats').html(`
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4>${stats.total}</h4>
+                                    <p class="mb-0">Total Laporan</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-flag fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4>${stats.pending}</h4>
+                                    <p class="mb-0">Menunggu</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4>${stats.reviewed}</h4>
+                                    <p class="mb-0">Ditinjau</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-search fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4>${stats.resolved}</h4>
+                                    <p class="mb-0">Selesai</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+    }
+    
+    // Initialize Report Manager when document is ready
+    $(document).ready(function() {
+        new ReportManager();
+    });
+</script>
+{% endblock %}
