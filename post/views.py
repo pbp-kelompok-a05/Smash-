@@ -651,3 +651,30 @@ def recent_thread(request):
         "post/recent_threads.html",
         {"posts": posts, "page_title": "Recent Threads"},
     )
+
+
+@login_required
+def edit_post(request, post_id):
+    """
+    View untuk halaman edit post
+    """
+    try:
+        post = get_object_or_404(Post, id=post_id, is_deleted=False)
+        
+        # Check permissions
+        is_owner = post.user == request.user
+        is_superuser = request.user.is_superuser or request.user.has_perm("post.manage_all_posts")
+        
+        if not (is_owner or is_superuser):
+            return redirect('post:index')
+        
+        context = {
+            'post': post,
+            'page_title': f'Edit Post - {post.title}'
+        }
+        
+        return render(request, 'edit_post.html', context)
+        
+    except Exception as e:
+        print(f"Error in edit_post view: {e}")
+        return redirect('post:index')

@@ -243,6 +243,70 @@
                         💬 Discussions
                     </button>
                 </div>
+                
+                <!-- Sorting Options -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                        </svg>
+                        <span>Sort by:</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <!-- Sorting Dropdown -->
+                        <div class="relative">
+                            <button id="sorting-dropdown-button" 
+                                    class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors interactive-btn card-shadow text-sm">
+                                <span id="current-sort-label">Newest</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            <div id="sorting-dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 hidden">
+                                <button class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 interactive-btn flex items-center gap-2" data-sort="newest">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Newest First
+                                </button>
+                                <button class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 interactive-btn flex items-center gap-2" data-sort="oldest">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-transparent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Oldest First
+                                </button>
+                                <div class="border-t border-gray-200 my-1"></div>
+                                <button class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 interactive-btn flex items-center gap-2" data-sort="most_liked">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-transparent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Most Liked
+                                </button>
+                                <button class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 interactive-btn flex items-center gap-2" data-sort="most_commented">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-transparent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Most Comments
+                                </button>
+                                <button class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 interactive-btn flex items-center gap-2" data-sort="trending">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-transparent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Trending
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Refresh Button -->
+                        <button id="refresh-posts" class="p-2 bg-white text-gray-600 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors interactive-btn card-shadow" title="Refresh posts">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Posts Container -->
                 <section class="max-w-4xl mx-auto" id="posts-container">
@@ -1589,7 +1653,8 @@ function handleLogout() {
 
 // Edit post function
 function editPost(postId) {
-    console.log('Editing post:', postId);
+    console.log('Redirecting to edit post:', postId);
+    // Gunakan URL name dari Django URL pattern
     window.location.href = `/post/edit/${postId}/`;
 }
 
@@ -1616,6 +1681,128 @@ function deletePost(postId) {
             console.error('Error deleting post:', error);
             alert('Error deleting post. Please try again.');
         });
+    }
+}
+
+// =============================================================================
+// SORTING FUNCTIONALITY
+// =============================================================================
+
+let currentSort = 'newest'; // Default sorting
+
+// Initialize sorting functionality
+function initializeSorting() {
+    const dropdownButton = document.getElementById('sorting-dropdown-button');
+    const dropdown = document.getElementById('sorting-dropdown');
+    const sortOptions = document.querySelectorAll('.sort-option');
+    const refreshButton = document.getElementById('refresh-posts');
+
+    // Toggle dropdown
+    if (dropdownButton && dropdown) {
+        dropdownButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            dropdown.classList.add('hidden');
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        dropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    // Handle sort option selection
+    sortOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const sortType = this.dataset.sort;
+            changeSorting(sortType);
+            dropdown.classList.add('hidden');
+        });
+    });
+
+    // Refresh posts
+    if (refreshButton) {
+        refreshButton.addEventListener('click', function() {
+            loadPosts();
+            // Add refresh animation
+            this.classList.add('animate-spin');
+            setTimeout(() => {
+                this.classList.remove('animate-spin');
+            }, 1000);
+        });
+    }
+}
+
+// Change sorting method
+function changeSorting(sortType) {
+    if (currentSort === sortType) return;
+    
+    currentSort = sortType;
+    
+    // Update UI
+    const currentSortLabel = document.getElementById('current-sort-label');
+    const sortOptions = document.querySelectorAll('.sort-option');
+    
+    // Update current sort label
+    const sortLabels = {
+        'newest': 'Newest',
+        'oldest': 'Oldest',
+        'most_liked': 'Most Liked',
+        'most_commented': 'Most Comments',
+        'trending': 'Trending'
+    };
+    
+    if (currentSortLabel) {
+        currentSortLabel.textContent = sortLabels[sortType];
+    }
+    
+    // Update checkmarks in dropdown
+    sortOptions.forEach(option => {
+        const icon = option.querySelector('svg');
+        if (option.dataset.sort === sortType) {
+            icon.classList.remove('text-transparent');
+        } else {
+            icon.classList.add('text-transparent');
+        }
+    });
+    
+    // Reload posts with new sorting
+    loadPosts();
+}
+
+// Modify loadPosts function to include sorting
+async function loadPosts() {
+    console.log('Loading posts from API with sort:', currentSort);
+    try {
+        const response = await fetch(`/post/api/posts/?sort=${currentSort}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            }
+        });
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.json();
+        const container = document.getElementById('posts-container');
+        const loading = document.getElementById('loading-posts');
+        
+        if (loading) loading.remove();
+
+        if (data.status === 'success' && Array.isArray(data.posts) && data.posts.length > 0) {
+            container.innerHTML = data.posts.map(post => createPostCard(post)).join('');
+            initializePostInteractions();
+        } else {
+            showNoPostsMessage(container);
+        }
+    } catch (error) {
+        console.error('Error loading posts:', error);
+        showErrorState(document.getElementById('posts-container'));
     }
 }
 
