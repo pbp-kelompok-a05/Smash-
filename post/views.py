@@ -131,6 +131,7 @@ class PostAPIView(View):
                             "image": post.image.url if post.image else None,
                             "video_link": post.video_link,
                             "user": post.user.username,
+                            "user_id": post.user.id,
                             "created_at": post.created_at.isoformat(),
                             "comment_count": post.comments.filter(
                                 is_deleted=False
