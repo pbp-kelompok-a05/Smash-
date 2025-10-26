@@ -18,3 +18,9 @@ def home(request):
         ).order_by("-created_at").first()
     )
     return render(request, "main.html", {"posts": posts, "popup_ad": popup_ad})
+
+def about_smash(request):
+    """
+    Halaman 'Tentang Smash' — berisi deskripsi website Smash!
+    """
+    return render(request, "about_smash.html")

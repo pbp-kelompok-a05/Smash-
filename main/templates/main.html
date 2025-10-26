@@ -37,7 +37,10 @@
                         <div class="flex items-center gap-3 mb-8">
                             <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">S</div>
                             <div>
-                                <div class="text-xl font-semibold text-purple-800">Smash!</div>
+                                <div class="flex items-center">
+                                    <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="h-8 w-auto">
+                                    </div>
+
                                 <div class="text-xs text-gray-500">Community • Padel</div>
                             </div>
                         </div>
@@ -114,7 +117,9 @@
                             <div class="flex items-center gap-4">
                                 <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
                                 <div class="hidden lg:flex items-center gap-4">
-                                    <div class="text-2xl font-extrabold text-purple-700">Smash!</div>
+                                    <img src="{% static 'images/logo-smash.png' %}" 
+                                        alt="Smash Logo" 
+                                        class="max-h-10 h-auto w-auto object-contain">
                                 </div>
                                 <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
                                     <svg xmlns="http://www.w3.org/2000/svg"
@@ -1313,5 +1318,75 @@
           }
       }
                 </script>
-    {% endblock content %}
+    <script>
+    // Popup Ads logic (randomized)
+    (function initPopupAds(){
+      try {
+        // Throttle: don't show more than once per 10 minutes
+        const THROTTLE_MS = 10 * 60 * 1000;
+        const lastShown = Number(localStorage.getItem('smash_popup_last_shown') || 0);
+        if (Date.now() - lastShown < THROTTLE_MS) return;
 
+        // Build and attach popup DOM
+        function renderPopup(ad){
+          if (!ad || !ad.image) return;
+          const existing = document.getElementById('popup-ads');
+          if (existing) existing.remove();
+
+          const overlay = document.createElement('div');
+          overlay.id = 'popup-ads';
+          overlay.className = 'hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'relative';
+
+          const closeBtn = document.createElement('button');
+          closeBtn.id = 'close-ads';
+          closeBtn.setAttribute('aria-label','Close');
+          closeBtn.className = 'absolute -top-3 -right-3 bg-white rounded-full shadow text-gray-600 w-8 h-8 flex items-center justify-center hover:bg-gray-100';
+          closeBtn.innerHTML = '&times;';
+
+          const img = document.createElement('img');
+          img.src = ad.image;
+          img.alt = ad.title || 'Advertisement';
+          img.className = 'w-80 sm:w-96 object-cover shadow-lg rounded-lg';
+
+          if (ad.link) {
+            const a = document.createElement('a');
+            a.href = `/ads/r/${ad.id}/`;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.appendChild(img);
+            wrapper.appendChild(a);
+          } else {
+            wrapper.appendChild(img);
+          }
+
+          wrapper.appendChild(closeBtn);
+          overlay.appendChild(wrapper);
+          document.body.appendChild(overlay);
+
+          function hide(){ overlay.classList.add('hidden'); localStorage.setItem('smash_popup_last_shown', String(Date.now())); }
+          closeBtn.addEventListener('click', hide);
+          overlay.addEventListener('click', (e) => { if (e.target === overlay) hide(); });
+
+          const delaySec = Number(ad.popup_delay_seconds || 0);
+          const delay = delaySec > 0 ? delaySec * 1000 : (3000 + Math.floor(Math.random() * 4000)); // 3-7s
+          setTimeout(() => overlay.classList.remove('hidden'), delay);
+        }
+
+        // Fetch ads and pick a random active popup ad
+        fetch('/ads/api/')
+          .then(r => r.json())
+          .then(data => {
+            const list = (data && data.ads) ? data.ads : [];
+            const candidates = list.filter(ad => ad.is_active && ad.ad_type === 'popup' && ad.image);
+            if (!candidates.length) return;
+            const randomAd = candidates[Math.floor(Math.random() * candidates.length)];
+            renderPopup(randomAd);
+          })
+          .catch(()=>{});
+      } catch(_) {}
+    })();
+    </script>
+    {% endblock content %}
