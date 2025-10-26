@@ -31,4 +31,7 @@ urlpatterns = [
     
     # Halaman Thread Terbaru
     path('recent-threads/', views.recent_thread, name='recent_threads'),
+    
+    # Edit post
+    path('edit/<int:post_id>/', views.edit_post, name='edit_post'),
 ]
