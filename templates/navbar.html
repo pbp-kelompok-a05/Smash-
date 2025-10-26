@@ -28,7 +28,31 @@
       <!-- Tombol create post -->
       <a href="{% url 'create_post' %}" class="create-post-btn desktop-only">
         <i class="fas fa-plus"></i> Create a post
+      <!-- Tombol create post -->
+      <a href="{% url 'create_post' %}" class="create-post-btn desktop-only">
+        <i class="fas fa-plus"></i> Create a post
       </a>
+      <a href="{% url 'create_post' %}" class="create-post-btn mobile-only" title="Create Post">
+        <i class="fas fa-plus"></i>
+      </a>
+
+      <!-- Menu user -->
+      <div class="user-menu">
+        <img 
+          src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+          alt="User Avatar" 
+          class="user-avatar"
+        >
+        <span class="username">{{ user.username }}</span>
+        <i class="fas fa-chevron-down dropdown-toggle"></i>
+        <ul class="dropdown-menu">
+          <li>
+            <form id="logout-form" method="POST" action="{% url 'logout_ajax' %}">
+              {% csrf_token %}
+              <button type="submit" class="logout-btn">Logout</button>
+            </form>
+          </li>
+        </ul>
       <a href="{% url 'create_post' %}" class="create-post-btn mobile-only" title="Create Post">
         <i class="fas fa-plus"></i>
       </a>
@@ -55,7 +79,11 @@
       <!-- Bila belum login -->
       <a href="{% url 'login_register' %}" class="auth-btn register-btn">
         <i class="fas fa-user-plus"></i> Register
+      <!-- Bila belum login -->
+      <a href="{% url 'login_register' %}" class="auth-btn register-btn">
+        <i class="fas fa-user-plus"></i> Register
       </a>
+      <a href="{% url 'login_register' %}" class="auth-btn login-btn">Login</a>
       <a href="{% url 'login_register' %}" class="auth-btn login-btn">Login</a>
     {% endif %}
   </div>
