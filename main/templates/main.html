@@ -4,7 +4,7 @@
     <title>Smash!</title>
 {% endblock meta %}
 {% block content %}
-    <style>
+            <style>
       :root { --bg-soft: #f7fff9; }
       body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
       /* quick custom scrollbar for desktop */
@@ -40,6 +40,7 @@
                                 <div class="flex items-center">
                                     <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="h-8 w-auto">
                                     </div>
+
                                 <div class="text-xs text-gray-500">Community • Padel</div>
                             </div>
                         </div>
@@ -52,17 +53,9 @@
                                      fill="none"
                                      viewBox="0 0 24 24"
                                      stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M3 16h18" />
                                 </svg>
-                                Logout
-                            </button>
-                        </div>
-                    {% else %}
-                        <!-- Login/Register buttons for sidebar -->
-                        <div class="mt-8 pt-4 border-t border-gray-200 space-y-2">
-                            <a href="{% url 'account:login_register' %}"
-                               class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 w-full">
-                                Register
+                                Recent
                             </a>
                             <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100"
                                href="#"><span class="text-xl">🏷️</span> For You</a>
@@ -124,11 +117,9 @@
                             <div class="flex items-center gap-4">
                                 <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
                                 <div class="hidden lg:flex items-center gap-4">
-                                    <div class="flex items-center">
-                                        <img src="{% static 'images/logo-smash.png' %}" 
-                                            alt="Smash Logo"
-                                            class="max-h-10 h-auto w-auto object-contain">
-                                        </div>
+                                    <img src="{% static 'images/logo-smash.png' %}" 
+                                        alt="Smash Logo" 
+                                        class="max-h-10 h-auto w-auto object-contain">
                                 </div>
                                 <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
                                     <svg xmlns="http://www.w3.org/2000/svg"
@@ -219,188 +210,113 @@
                             </section>
                         </main>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <!-- User info and buttons for logged in users -->
-                        {% if user.is_authenticated %}
-                            <!-- Create Post Button -->
-                            <button id="create-post-btn"
-                                    class="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg"
-                                     class="h-4 w-4"
-                                     fill="none"
-                                     viewBox="0 0 24 24"
-                                     stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                </svg>
-                                Create Post
-                            </button>
-                            <span class="text-sm text-gray-700 hidden sm:block">Welcome, {{ user.username }}</span>
-                            <button id="mobile-logout-btn"
-                                    class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg"
-                                     class="h-4 w-4"
-                                     fill="none"
-                                     viewBox="0 0 24 24"
-                                     stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                                Logout
-                            </button>
-                        {% else %}
-                            <!-- Login and Register buttons for non-logged in users -->
-                            <a href="{% url 'account:login_register' %}"
-                               class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hidden sm:flex items-center gap-2 hover:bg-blue-700">
-                                Register
-                            </a>
-                            <a href="{% url 'account:login_register' %}"
-                               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm hidden sm:flex items-center gap-2 hover:bg-gray-100">
-                                Login
-                            </a>
-                        {% endif %}
-                    </div>
-                </header>
-                <!-- Filters + main feed -->
-                <main class="px-6 py-8">
-                    <div class="flex items-center gap-3 mb-6">
-                        <button class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm">Recent</button>
-                        <button class="px-3 py-1 rounded-full bg-white text-gray-600 text-sm">For You</button>
-                        <button class="px-3 py-1 rounded-full bg-white text-gray-600 text-sm">Hot Thread</button>
-                    </div>
-                    <!-- Feed column -->
-                    <section class="max-w-4xl mx-auto" id="posts-container">
-                        {% if posts %}
-                            {% for p in posts %}
-                                <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
-                                    <header class="px-6 py-4 flex items-start gap-4">
-                                        <img src="{% static 'images/user-profile.png' %}"
-                                             alt="avatar"
-                                             class="w-12 h-12 rounded-full object-cover" />
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <h3 class="font-semibold text-gray-900">{{ p.user.username }}</h3>
-                                                <span class="text-xs text-gray-400">{{ p.created_at|date:"M d, Y H:i" }}</span>
-                                            </div>
-                                            <h2 class="text-lg font-bold text-gray-900 mt-1">{{ p.title }}</h2>
+                </div>
+                <!-- Create Post Modal - Only show if user is authenticated -->
+                {% if user.is_authenticated %}
+                    <div id="create-post-modal" class="fixed inset-0 z-50 hidden">
+                        <div class="modal-backdrop absolute inset-0" id="modal-backdrop"></div>
+                        <div class="flex items-center justify-center min-h-screen p-4">
+                            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all">
+                                <!-- Modal Header -->
+                                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                                    <h3 class="text-xl font-semibold text-gray-900">Create New Post</h3>
+                                    <button id="close-modal"
+                                            class="text-gray-400 hover:text-gray-600 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             class="h-6 w-6"
+                                             fill="none"
+                                             viewBox="0 0 24 24"
+                                             stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <!-- Modal Body -->
+                                <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                                    <form id="create-post-form" class="space-y-4">
+                                        {% csrf_token %}
+                                        <!-- Title Input -->
+                                        <div>
+                                            <label for="post-title" class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                                            <input type="text"
+                                                   id="post-title"
+                                                   name="title"
+                                                   required
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                                   placeholder="What's on your mind?">
                                         </div>
-                                    </header>
-                                    <div class="px-6 pb-6 text-gray-700">{{ p.content|linebreaksbr|truncatechars:240 }}</div>
-                                </article>
-                            {% endfor %}
-                        {% else %}
-                            <!-- Placeholder while JS fetch loads -->
-                            <div id="loading-posts" class="text-center py-12">
-                                <div class="loading-spinner mx-auto mb-4"></div>
-                                <p class="text-gray-500">Loading posts...</p>
+                                        <!-- Content Input -->
+                                        <div>
+                                            <label for="post-content"
+                                                   class="block text-sm font-medium text-gray-700 mb-2">
+                                                Content *
+                                            </label>
+                                            <textarea id="post-content"
+                                                      name="content"
+                                                      required
+                                                      rows="6"
+                                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                                                      placeholder="Share your thoughts, experiences, or questions..."></textarea>
+                                        </div>
+                                        <!-- Image Upload -->
+                                        <div>
+                                            <label for="post-image" class="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
+                                            <input type="file"
+                                                   id="post-image"
+                                                   name="image"
+                                                   accept="image/*"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                            <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF</p>
+                                        </div>
+                                        <!-- Video Link -->
+                                        <div>
+                                            <label for="post-video" class="block text-sm font-medium text-gray-700 mb-2">Video Link (Optional)</label>
+                                            <input type="url"
+                                                   id="post-video"
+                                                   name="video_link"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                                   placeholder="https://youtube.com/...">
+                                        </div>
+                                        <!-- Form Messages -->
+                                        <div id="form-messages" class="hidden"></div>
+                                    </form>
+                                </div>
+                                <!-- Modal Footer -->
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                                    <button type="button"
+                                            id="cancel-post"
+                                            class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button type="submit"
+                                            form="create-post-form"
+                                            id="submit-post"
+                                            class="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors flex items-center gap-2">
+                                        <span>Create Post</span>
+                                        <div id="submit-spinner"
+                                             class="hidden loading-spinner border-white border-t-transparent"></div>
+                                    </button>
+                                </div>
                             </div>
-                        {% endif %}
-                    </section>
-                </main>
-            </div>
-        </div>
-        <!-- Create Post Modal - Only show if user is authenticated -->
-        {% if user.is_authenticated %}
-            <div id="create-post-modal" class="fixed inset-0 z-50 hidden">
-                <div class="modal-backdrop absolute inset-0" id="modal-backdrop"></div>
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all">
-                        <!-- Modal Header -->
-                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                            <h3 class="text-xl font-semibold text-gray-900">Create New Post</h3>
-                            <button id="close-modal"
-                                    class="text-gray-400 hover:text-gray-600 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg"
-                                     class="h-6 w-6"
-                                     fill="none"
-                                     viewBox="0 0 24 24"
-                                     stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
                         </div>
-                        <!-- Modal Body -->
-                        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                            <form id="create-post-form" class="space-y-4">
-                                {% csrf_token %}
-                                <!-- Title Input -->
-                                <div>
-                                    <label for="post-title" class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-                                    <input type="text"
-                                           id="post-title"
-                                           name="title"
-                                           required
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                           placeholder="What's on your mind?">
-                                </div>
-                                <!-- Content Input -->
-                                <div>
-                                    <label for="post-content"
-                                           class="block text-sm font-medium text-gray-700 mb-2">Content *</label>
-                                    <textarea id="post-content"
-                                              name="content"
-                                              required
-                                              rows="6"
-                                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-                                              placeholder="Share your thoughts, experiences, or questions..."></textarea>
-                                </div>
-                                <!-- Image Upload -->
-                                <div>
-                                    <label for="post-image" class="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
-                                    <input type="file"
-                                           id="post-image"
-                                           name="image"
-                                           accept="image/*"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                    <p class="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF</p>
-                                </div>
-                                <!-- Video Link -->
-                                <div>
-                                    <label for="post-video" class="block text-sm font-medium text-gray-700 mb-2">Video Link (Optional)</label>
-                                    <input type="url"
-                                           id="post-video"
-                                           name="video_link"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                           placeholder="https://youtube.com/...">
-                                </div>
-                                <!-- Form Messages -->
-                                <div id="form-messages" class="hidden"></div>
-                            </form>
-                        </div>
-                        <!-- Modal Footer -->
-                        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                            <button type="button"
-                                    id="cancel-post"
-                                    class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                    form="create-post-form"
-                                    id="submit-post"
-                                    class="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors flex items-center gap-2">
-                                <span>Create Post</span>
-                                <div id="submit-spinner"
-                                     class="hidden loading-spinner border-white border-t-transparent"></div>
-                            </button>
-                        </div>
+                    </div>
+                {% endif %}
+                <!-- Image Modal -->
+                <div id="image-modal"
+                     class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-90">
+                    <div class="relative max-w-4xl max-h-full">
+                        <button id="close-image-modal"
+                                class="absolute top-4 right-4 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-colors">
+                            ×
+                        </button>
+                        <img id="modal-image"
+                             src=""
+                             alt="Enlarged post image"
+                             class="max-w-full max-h-full object-contain">
                     </div>
                 </div>
-            </div>
-        {% endif %}
-        <!-- Image Modal -->
-        <div id="image-modal"
-             class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-90">
-            <div class="relative max-w-4xl max-h-full">
-                <button id="close-image-modal"
-                        class="absolute top-4 right-4 text-white text-2xl z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-colors">
-                    ×
-                </button>
-                <img id="modal-image"
-                     src=""
-                     alt="Enlarged post image"
-                     class="max-w-full max-h-full object-contain">
-            </div>
-        </div>
-        <!-- JavaScript for dynamic posts, logout, and create post -->
-        <script>
+                <!-- JavaScript for dynamic posts, logout, and create post -->
+                <script>
       // CSRF Token for AJAX requests
       function getCookie(name) {
         let cookieValue = null;
@@ -701,10 +617,6 @@
                                       <span class="font-medium">${post.comment_count || 0}</span>
                                       <span>comments</span>
                                   </div>
-                                  <div class="flex items-center gap-2">
-                                      <span class="font-medium post-shares-count">${post.shares_count || 0}</span>
-                                      <span>shares</span>
-                                  </div>
                               </div>
                           </div>
 
@@ -726,7 +638,7 @@
 
                                   <button class="comment-btn flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors text-sm" data-post-id="${post.id}">
                                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z" />
                                       </svg>
                                       Comment
                                   </button>
@@ -1228,57 +1140,17 @@
 
           // Share functionality
           document.querySelectorAll('.share-btn').forEach(btn => {
-              btn.addEventListener('click', async function() {
+              btn.addEventListener('click', function() {
                   const postId = this.dataset.postId;
-                  const footer = this.closest('footer');
-                  const sharesCount = footer.querySelector('.post-shares-count');
                   
-                  try {
-                      // Call backend API to track share
-                      const response = await fetch(`/post/api/posts/${postId}/share/`, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'X-CSRFToken': csrftoken,
-                          },
+                  // Simple share implementation
+                  if (navigator.share) {
+                      navigator.share({
+                          title: 'Check out this post on Smash!',
+                          url: window.location.href + `?post=${postId}`
                       });
-
-                      const data = await response.json();
-                      
-                      if (data.status === 'success') {
-                          // Update share count
-                          if (sharesCount) {
-                              sharesCount.textContent = data.shares_count;
-                          }
-                          
-                          // Use native share API if available
-                          if (navigator.share) {
-                              try {
-                                  await navigator.share({
-                                      title: 'Check out this post on Smash!',
-                                      text: 'Interesting post about Padel',
-                                      url: window.location.href + `?post=${postId}`
-                                  });
-                              } catch (shareError) {
-                                  // User cancelled share or error occurred
-                                  console.log('Share cancelled or failed:', shareError);
-                              }
-                          } else {
-                              // Fallback: Copy link to clipboard
-                              const url = window.location.href + `?post=${postId}`;
-                              if (navigator.clipboard) {
-                                  await navigator.clipboard.writeText(url);
-                                  alert('Link copied to clipboard!');
-                              } else {
-                                  alert('Post shared! Share count updated.');
-                              }
-                          }
-                      } else {
-                          alert('Error sharing post: ' + data.message);
-                      }
-                  } catch (error) {
-                      console.error('Error sharing post:', error);
-                      alert('Error sharing post. Please try again.');
+                  } else {
+                      alert('Post shared! (Copy link to share manually)');
                   }
               });
           });
@@ -1445,5 +1317,5 @@
               });
           }
       }
-        </script>
+                </script>
     {% endblock content %}
