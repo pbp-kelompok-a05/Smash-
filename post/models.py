@@ -75,6 +75,11 @@ class Post(models.Model):
         """Get total dislikes count"""
         return self.interactions.filter(interaction_type="dislike").count()
 
+    @property
+    def shares_count(self):
+        """Get total shares count"""
+        return self.shares.count()
+
 
 class PostInteraction(models.Model):
     """
@@ -135,3 +140,28 @@ class PostSave(models.Model):
 
     def __str__(self):
         return f"{self.user.username} saved Post #{self.post.id}"
+
+
+class PostShare(models.Model):
+    """
+    Model untuk menyimpan data share post.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Pengguna",
+        related_name="shared_posts",
+    )
+    post = models.ForeignKey(
+        Post, on_delete=models.CASCADE, verbose_name="Post", related_name="shares"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Waktu Dibagikan")
+
+    class Meta:
+        verbose_name = "Post Share"
+        verbose_name_plural = "Post Shares"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} shared Post #{self.post.id}"
