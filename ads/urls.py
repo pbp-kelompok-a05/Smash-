@@ -1,16 +1,20 @@
-from django.conf import settings
 from django.urls import path
-from django.conf.urls.static import static
-from . import views
+from .views import (
+    AdvertisementAPI,
+    manage_ads_page,
+    redirect_ad,
+    premium_page,
+    premium_checkout,
+    premium_success,
+)
 
 urlpatterns = [
-    path('manage/', views.manage_ads, name='manage_ads'),
-    path('delete/<int:ad_id>/', views.delete_ad, name='delete_ad'),
-    path('edit/<int:ad_id>/', views.edit_ad, name='edit_ad'),
-    path('admin-login/', views.admin_login, name='admin_login'),
-    path('ads/<int:ad_id>/edit/', views.edit_ad, name='edit_ad'),
-    path('ads/<int:ad_id>/toggle/', views.toggle_ad, name='toggle_ad'),
-
+    path('manage/', manage_ads_page, name='manage_ads'),
+    path('api/', AdvertisementAPI.as_view(), name='ad_list'),
+    path('api/<int:ad_id>/', AdvertisementAPI.as_view(), name='ad_detail'),
+    path('api/<int:ad_id>/update/', AdvertisementAPI.as_view(), name='ad_update'),  # TAMBAH INI!
+    path('r/<int:ad_id>/', redirect_ad, name='ad_redirect'),
+    path('premium/', premium_page, name='ads_premium'),
+    path('premium/checkout/', premium_checkout, name='ads_premium_checkout'),
+    path('premium/success/', premium_success, name='ads_premium_success'),
 ]
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

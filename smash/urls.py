@@ -24,6 +24,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("account/", include("account.urls")),  # ← PASTIKAN PATH SPESIFIK
+    path("ads/", include("ads.urls")),  # ← PASTIKAN PATH SPESIFIK
     path("", include("main.urls")),  # ← BIARKAN MAIN MENANGANI ROOT
     path("post/", include("post.urls")),  # ← GUNAKAN PATH SPESIFIK
     path("comments/", include("comment.urls")),
