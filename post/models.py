@@ -49,8 +49,11 @@ class Post(models.Model):
 
     def clean(self):
         """Validasi custom: Post harus memiliki gambar atau video"""
-        if not self.image and not self.video_link:
-            raise ValidationError("Post harus memiliki gambar atau tautan video.")
+        # Note: This validation is optional - posts can be text-only
+        # Uncomment the lines below if you want to enforce image/video requirement
+        # if not self.image and not self.video_link:
+        #     raise ValidationError("Post harus memiliki gambar atau tautan video.")
+        pass
 
     def delete(self, *args, **kwargs):
         """Soft delete untuk menjaga integritas data"""
@@ -107,3 +110,28 @@ class PostInteraction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.interaction_type} - Post #{self.post.id}"
+
+
+class PostSave(models.Model):
+    """
+    Model untuk menyimpan post yang di-bookmark/save oleh user.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Pengguna",
+        related_name="saved_posts",
+    )
+    post = models.ForeignKey(
+        Post, on_delete=models.CASCADE, verbose_name="Post", related_name="saves"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Waktu Disimpan")
+
+    class Meta:
+        verbose_name = "Post Tersimpan"
+        verbose_name_plural = "Posts Tersimpan"
+        unique_together = ["user", "post"]  # User can only save a post once
+
+    def __str__(self):
+        return f"{self.user.username} saved Post #{self.post.id}"
