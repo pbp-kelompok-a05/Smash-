@@ -6,4 +6,5 @@ app_name = 'main'
 
 urlpatterns = [
     path('', views.home, name="home"),
+    path('about/', views.about_smash, name="about_smash"),
 ]
