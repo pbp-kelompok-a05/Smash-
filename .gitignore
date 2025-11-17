@@ -5,6 +5,10 @@
 **pycache**
 db.sqlite3
 media
+
+# Static files - uncomment the line below if your PaaS runs collectstatic during deployment
+# staticfiles/
+# If your PaaS needs staticfiles committed, keep the line above commented out
 # Backup files
 *.bak
 # If you are using PyCharm

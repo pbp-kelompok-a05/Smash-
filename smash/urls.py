@@ -17,9 +17,10 @@ Including another URLconf
 
 from django.views.generic import RedirectView
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 from post import views as post_views
 
 urlpatterns = [
@@ -31,12 +32,24 @@ urlpatterns = [
     path("report/", include("report.urls")),
     path("profil/", include("profil.urls")),
     path("", include("main.urls")),  # ← BIARKAN MAIN MENANGANI ROOT
-
     # Routing Sidebar
-    path('hot/', post_views.hot_threads, name='hot_threads'),
-    path('bookmark/', post_views.bookmarked_threads, name='bookmarked_threads'),
-    path('recent/', post_views.recent_thread, name='recent_thread'),
+    path("hot/", post_views.hot_threads, name="hot_threads"),
+    path("bookmark/", post_views.bookmarked_threads, name="bookmarked_threads"),
+    path("recent/", post_views.recent_thread, name="recent_thread"),
 ]
 
+# Serve media files
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Serve static files (works in both development and production)
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(
+        settings.STATIC_URL, document_root=settings.BASE_DIR / "static"
+    )
+else:
+    # In production, serve static files from STATIC_ROOT
+    urlpatterns += [
+        re_path(
+            r"^static/(?P<path>.*)$", serve, {"document_root": settings.STATIC_ROOT}
+        ),
+    ]
