@@ -59,8 +59,8 @@
     <header class="flex items-center justify-between px-6 py-5 bg-white/80 backdrop-blur sticky top-0 z-10">
       <div class="flex items-center gap-4">
         <button class="lg:hidden p-2 rounded-md bg-white card-shadow">☰</button>
-        <div class="hidden lg:flex items-center gap-4">
-          <div class="text-2xl font-extrabold text-purple-700">Smash!</div>
+        <div class="hidden lg:flex items-center">
+              <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="h-8 w-auto">
         </div>
         <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
           <svg xmlns="http://www.w3.org/2000/svg " class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd" /></svg>
@@ -91,7 +91,11 @@
       <div class="max-w-4xl mx-auto bg-gray-100 rounded-xl p-8 mt-6 shadow-lg">
         <div class="bg-white rounded-xl p-6 shadow mb-6">
           <div class="flex items-center space-x-6">
-            <img src="{% static 'images/user-profile.png' %}" alt="Profil" class="rounded-full w-20 h-20" />
+            {% if profile and profile.profile_photo %}
+              <img src="{{ profile.profile_photo.url }}" alt="Profil {{ user.username }}" class="rounded-full w-20 h-20 object-cover border" />
+            {% else %}
+              <img src="{% static 'images/user-profile.png' %}" alt="Profil" class="rounded-full w-20 h-20 object-cover border" />
+            {% endif %}
             <div>
               <h2 class="text-lg">Hello,</h2>
               <h1 id="profile-name" class="text-4xl font-extrabold">{{ user.username }}</h1>
@@ -100,7 +104,7 @@
           </div>
 
           <a href="{% url 'profil:edit_or_create_profile' %}" class="inline-block mt-4">
-            <button class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">+ edit bio</button>
+            <button class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">+ edit profile</button>
           </a>
 
           <div class="flex gap-3 mt-4">
@@ -115,7 +119,11 @@
                 {% for p in posts %}
                     <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
                         <header class="px-6 py-4 flex items-start gap-4">
-                            <img src="{% static 'images/user-profile.png' %}" alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+                            {% if profile.profile_photo %}
+                              <img src="{{ profile.profile_photo.url }}" alt="avatar" class="w-12 h-12 rounded-full object-cover border" />
+                            {% else %}
+                              <img src="{% static 'images/user-profile.png' %}" alt="avatar" class="w-12 h-12 rounded-full object-cover border" />
+                            {% endif %}
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
                                     <h3 class="font-semibold text-gray-900">{{ p.user.username }}</h3>
@@ -146,10 +154,11 @@
         </div>
         <div id="error" class="hidden"></div>
         <div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
-          <div class="w-32 h-32 mx-auto mb-4">
-            <img src="{% static 'image/no-post.png' %}" alt="No post available" class="w-full h-full object-contain">
+          <div class="w-40 h-40 mx-auto mb-4">
+            <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" alt="No post available" class="w-full h-full object-contain rounded-lg">
           </div>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">No post found</h3>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
+          <p class="text-gray-400 text-sm">Be the first to create a post!</p>
         </div>
       </div>
     </main>
@@ -363,6 +372,7 @@
 
   // Profile-page post logic
   const CURRENT_USER_ID = {{ user.id|default:"null" }};
+  const DEFAULT_AVATAR = "{% static 'images/user-profile.png' %}";
   const postContainer = document.getElementById('posts-list');
   const showMyPostButton = document.getElementById('filter-my');
   const showMyBookmarkButton = document.getElementById('filter-bookmark');
@@ -381,10 +391,16 @@
     showMyLikesButton.className = base + (activeFilter === 'liked' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
   }
 
-  function displayPageSection({ showLoading = false, showError = false, showEmpty = false }) {
-    loadingSpinner.classList.toggle('hidden', !showLoading);
-    errorMessage.classList.toggle('hidden', !showError);
-    emptyStateDisplay.classList.toggle('hidden', !showEmpty);
+  function displayPageSection({ showLoading, showError, showEmpty }) {
+    if (showLoading !== undefined) {
+      loadingSpinner.classList.toggle('hidden', !showLoading);
+    }
+    if (showError !== undefined) {
+      errorMessage.classList.toggle('hidden', !showError);
+    }
+    if (showEmpty !== undefined) {
+      emptyStateDisplay.classList.toggle('hidden', !showEmpty);
+    }
   }
 
   function createPostCard(post) {
@@ -392,6 +408,7 @@
         // Check if user is authenticated
         const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
         post.is_authenticated = isAuthenticated;
+        const isSaved = Boolean(post.is_saved);
         
         const editButtons = post.can_edit ? `
             <div class="flex items-center gap-2 ml-auto">
@@ -483,11 +500,13 @@
             `;
         }
 
+        const avatarSrc = post.profile_photo || DEFAULT_AVATAR;
+
         return `
             <div class="post-card" data-post-id="${post.id}">
                 <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
                     <header class="px-6 py-4 flex items-start gap-4">
-                        <img src="{% static 'images/user-profile.png' %}" alt="avatar" class="w-12 h-12 rounded-full object-cover" />
+                        <img src="${avatarSrc}" alt="avatar" class="w-12 h-12 rounded-full object-cover border" />
                         <div class="flex-1">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h3 class="font-semibold text-lg text-gray-900">${escapeHtml(post.title)}</h3>
@@ -548,11 +567,11 @@
                                     Comment
                                 </button>
 
-                                <button class="save-btn flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors text-sm" data-post-id="${post.id}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <button class="save-btn flex items-center gap-2 ${isSaved ? 'text-green-600' : 'text-gray-600'} hover:text-green-600 transition-colors text-sm" data-post-id="${post.id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${isSaved ? 'fill-green-600' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v16l7-5 7 5V3z" />
                                     </svg>
-                                    Save
+                                    <span class="save-text">${isSaved ? 'Saved' : 'Save'}</span>
                                 </button>
                             </div>
 
@@ -570,7 +589,13 @@
                             <div class="mb-4 pb-4 border-b border-gray-100">
                                 <form class="add-comment-form" data-post-id="${post.id}">
                                     <div class="flex gap-3 items-start">
-                                        <img src="{% static 'images/user-profile.png' %}" alt="Your avatar" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                        {% with user_prof=user.profile_set.first %}
+                                        {% if user_prof and user_prof.profile_photo %}
+                                        <img src="{{ user_prof.profile_photo.url }}" alt="Your avatar" class="w-8 h-8 rounded-full object-cover border flex-shrink-0" />
+                                        {% else %}
+                                        <img src="{% static 'images/user-profile.png' %}" alt="Your avatar" class="w-8 h-8 rounded-full object-cover border flex-shrink-0" />
+                                        {% endif %}
+                                        {% endwith %}
                                         <div class="flex-1 flex flex-col gap-2">
                                             <textarea placeholder="Write a comment..." class="comment-input flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none" rows="2" required></textarea>
                                             <div class="flex justify-end">
@@ -597,103 +622,85 @@
         `;
     }
           function initializeCommentInteractions() {
-          // Like comment
-          document.querySelectorAll('.comment-like-btn').forEach(btn => {
+            function setCommentButtonState(btn, icon, isActive, activeTextClass, activeFillClass) {
+              if (!btn || !icon) return;
+              btn.classList.toggle('text-gray-600', !isActive);
+              btn.classList.toggle(activeTextClass, isActive);
+              icon.classList.toggle(activeFillClass, isActive);
+              if (!isActive) icon.classList.remove(activeFillClass);
+            }
+
+            // Like comment
+            document.querySelectorAll('.comment-like-btn').forEach(btn => {
               btn.addEventListener('click', async function() {
-                  const commentId = this.dataset.commentId;
-                  const commentItem = this.closest('.comment-item');
-                  const likesCount = commentItem.querySelector('.comment-likes-count');
-                  const dislikesCount = commentItem.querySelector('.comment-dislikes-count');
-                  const likeIcon = this.querySelector('.comment-like-icon');
-                  const dislikeBtn = commentItem.querySelector('.comment-dislike-btn');
-                  const dislikeIcon = dislikeBtn.querySelector('.comment-dislike-icon');
+                const commentId = this.dataset.commentId;
+                const commentItem = this.closest('.comment-item');
+                const likesCount = commentItem.querySelector('.comment-likes-count');
+                const dislikesCount = commentItem.querySelector('.comment-dislikes-count');
+                const likeBtn = commentItem.querySelector('.comment-like-btn');
+                const dislikeBtn = commentItem.querySelector('.comment-dislike-btn');
+                const likeIcon = likeBtn ? likeBtn.querySelector('.comment-like-icon') : null;
+                const dislikeIcon = dislikeBtn ? dislikeBtn.querySelector('.comment-dislike-icon') : null;
 
-                  try {
-                      const response = await fetch(`/comments/${commentId}/like/`, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'X-CSRFToken': csrftoken,
-                          },
-                      });
+                try {
+                  const response = await fetch(`/comments/${commentId}/like/`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken': csrftoken,
+                    },
+                  });
+                  const data = await response.json();
 
-                      const data = await response.json();
-                      
-                      if (data.status === 'success') {
-                          likesCount.textContent = data.likes_count;
-                          dislikesCount.textContent = data.dislikes_count;
-                          toggleLikeButtonView(this, data.user_interaction === 'like');
-                          toggleDislikeButtonView(dislikeBtn, false);
-                          
-                          // Update button states
-                          if (data.action === 'liked') {
-                              this.classList.add('text-pink-600');
-                              this.classList.remove('text-gray-600');
-                              likeIcon.classList.add('fill-pink-600');
-                              // Remove dislike if active
-                              dislikeBtn.classList.remove('text-red-600');
-                              dislikeBtn.classList.add('text-gray-600');
-                              dislikeIcon.classList.remove('fill-red-600');
-                          } else {
-                              this.classList.remove('text-pink-600');
-                              this.classList.add('text-gray-600');
-                              likeIcon.classList.remove('fill-pink-600');
-                          }
-                      }
-                  } catch (error) {
-                      console.error('Error liking comment:', error);
+                  if (data.status === 'success') {
+                    likesCount.textContent = data.likes_count;
+                    dislikesCount.textContent = data.dislikes_count;
+                    const likeActive = data.action === 'liked';
+                    const dislikeActive = false;
+                    setCommentButtonState(likeBtn, likeIcon, likeActive, 'text-pink-600', 'fill-pink-600');
+                    setCommentButtonState(dislikeBtn, dislikeIcon, dislikeActive, 'text-red-600', 'fill-red-600');
                   }
+                } catch (error) {
+                  console.error('Error liking comment:', error);
+                }
               });
-          });
+            });
 
-          // Dislike comment
-          document.querySelectorAll('.comment-dislike-btn').forEach(btn => {
+            // Dislike comment
+            document.querySelectorAll('.comment-dislike-btn').forEach(btn => {
               btn.addEventListener('click', async function() {
-                  const commentId = this.dataset.commentId;
-                  const commentItem = this.closest('.comment-item');
-                  const likesCount = commentItem.querySelector('.comment-likes-count');
-                  const dislikesCount = commentItem.querySelector('.comment-dislikes-count');
-                  const dislikeIcon = this.querySelector('.comment-dislike-icon');
-                  const likeBtn = commentItem.querySelector('.comment-like-btn');
-                  const likeIcon = likeBtn.querySelector('.comment-like-icon');
+                const commentId = this.dataset.commentId;
+                const commentItem = this.closest('.comment-item');
+                const likesCount = commentItem.querySelector('.comment-likes-count');
+                const dislikesCount = commentItem.querySelector('.comment-dislikes-count');
+                const dislikeBtn = commentItem.querySelector('.comment-dislike-btn');
+                const likeBtn = commentItem.querySelector('.comment-like-btn');
+                const dislikeIcon = dislikeBtn ? dislikeBtn.querySelector('.comment-dislike-icon') : null;
+                const likeIcon = likeBtn ? likeBtn.querySelector('.comment-like-icon') : null;
 
-                  try {
-                      const response = await fetch(`/comments/${commentId}/dislike/`, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'X-CSRFToken': csrftoken,
-                          },
-                      });
+                try {
+                  const response = await fetch(`/comments/${commentId}/dislike/`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken': csrftoken,
+                    },
+                  });
+                  const data = await response.json();
 
-                      const data = await response.json();
-                      
-                      if (data.status === 'success') {
-                          likesCount.textContent = data.likes_count;
-                          dislikesCount.textContent = data.dislikes_count;
-                          toggleLikeButtonView(this, data.user_interaction === 'like');
-                          toggleDislikeButtonView(dislikeBtn, false);
-                          
-                          // Update button states
-                          if (data.action === 'disliked') {
-                              this.classList.add('text-red-600');
-                              this.classList.remove('text-gray-600');
-                              dislikeIcon.classList.add('fill-red-600');
-                              // Remove like if active
-                              likeBtn.classList.remove('text-pink-600');
-                              likeBtn.classList.add('text-gray-600');
-                              likeIcon.classList.remove('fill-pink-600');
-                          } else {
-                              this.classList.remove('text-red-600');
-                              this.classList.add('text-gray-600');
-                              dislikeIcon.classList.remove('fill-red-600');
-                          }
-                      }
-                  } catch (error) {
-                      console.error('Error disliking comment:', error);
+                  if (data.status === 'success') {
+                    likesCount.textContent = data.likes_count;
+                    dislikesCount.textContent = data.dislikes_count;
+                    const dislikeActive = data.action === 'disliked';
+                    const likeActive = false;
+                    setCommentButtonState(dislikeBtn, dislikeIcon, dislikeActive, 'text-red-600', 'fill-red-600');
+                    setCommentButtonState(likeBtn, likeIcon, likeActive, 'text-pink-600', 'fill-pink-600');
                   }
+                } catch (error) {
+                  console.error('Error disliking comment:', error);
+                }
               });
-          });
+            });
 
           // Delete comment
           document.querySelectorAll('.delete-comment-btn').forEach(btn => {
@@ -758,6 +765,18 @@
           dislikeText.textContent = 'Dislike';
       }
   }
+  function toggleSaveButtonView(saveBtn, isActive) {
+      const saveIcon = saveBtn.querySelector('svg');
+      const saveText = saveBtn.querySelector('.save-text');
+      saveBtn.classList.toggle('text-green-600', isActive);
+      saveBtn.classList.toggle('text-gray-600', !isActive);
+      if (saveIcon) {
+          saveIcon.classList.toggle('fill-green-600', isActive);
+      }
+      if (saveText) {
+          saveText.textContent = isActive ? 'Saved' : 'Save';
+      }
+  }
         function initializePostInteractions() {
           // Like functionality
           document.querySelectorAll('.like-btn').forEach(btn => {
@@ -789,6 +808,9 @@
                           // Update button views based on current state
                           toggleLikeButtonView(this, data.user_interaction === 'like');
                           toggleDislikeButtonView(dislikeBtn, false);
+                          if (activeFilter === 'liked' && data.user_interaction !== 'like') {
+                              loadPosts();
+                          }
                       }
                   } catch (error) {
                       console.error('Error liking post:', error);
@@ -826,6 +848,9 @@
                           // Update button views based on current state
                           toggleDislikeButtonView(this, data.user_interaction === 'dislike');
                           toggleLikeButtonView(likeBtn, false);
+                          if (activeFilter === 'liked' && data.user_interaction !== 'like') {
+                              loadPosts();
+                          }
                       }
                   } catch (error) {
                       console.error('Error disliking post:', error);
@@ -916,13 +941,30 @@
 
           // Save functionality
           document.querySelectorAll('.save-btn').forEach(btn => {
-              btn.addEventListener('click', function() {
-                  this.classList.toggle('text-green-600');
-                  const svg = this.querySelector('svg');
-                  if (this.classList.contains('text-green-600')) {
-                      svg.classList.add('fill-green-600');
-                  } else {
-                      svg.classList.remove('fill-green-600');
+              btn.addEventListener('click', async function() {
+                  const postId = this.dataset.postId;
+                  try {
+                      const res = await fetch(`/post/api/posts/${postId}/save/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': csrftoken,
+                          },
+                      });
+                      if (res.status === 401) {
+                          alert('Silakan login terlebih dahulu untuk menyimpan post.');
+                          return;
+                      }
+                      const data = await res.json();
+                      if (data.status === 'success') {
+                          const isSaved = data.is_saved !== undefined ? data.is_saved : data.action === 'saved';
+                          toggleSaveButtonView(this, isSaved);
+                          if (activeFilter === 'bookmark' && data.action === 'removed') {
+                              loadPosts();
+                          }
+                      }
+                  } catch (error) {
+                      console.error('Error saving post:', error);
                   }
               });
           });
@@ -976,7 +1018,7 @@
           if (!container) return;
           container.innerHTML = `
               <div class="text-center py-12">
-                  <img src="https://i.pinimg.com/originals/ab/c9/6f/abc96f284c5fd1a927380fe94b07a816.gif" alt="No posts" class="mx-auto w-64 h-64 object-cover rounded-lg">
+                  <img src="https://media.tenor.com/jhEYr7OJbdgAAAAC/duck-duck-eat.gif" alt="No posts" class="mx-auto w-64 h-64 object-cover rounded-lg">
                   <p class="mt-4 text-gray-500 text-lg">No posts yet</p>
                   <p class="text-gray-400 text-sm">Be the first to create a post!</p>
               </div>
@@ -1028,6 +1070,8 @@
           const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
           const currentUserId = {{ user.id|default:"null" }};
           const canEdit = isAuthenticated && (comment.user_id === currentUserId);
+          const DEFAULT_AVATAR = "{% static 'images/user-profile.png' %}";
+          const avatarSrc = comment.profile_photo || DEFAULT_AVATAR;
           
           const isLiked = comment.user_interaction === 'like';
           const isDisliked = comment.user_interaction === 'dislike';
@@ -1035,7 +1079,7 @@
           return `
               <div class="comment-item bg-gray-50 rounded-lg p-4" data-comment-id="${comment.id}">
                   <div class="flex gap-3">
-                      <img src="{% static 'images/user-profile.png' %}" alt="${escapeHtml(comment.user)}" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      <img src="${avatarSrc}" alt="${escapeHtml(comment.user)}" class="w-8 h-8 rounded-full object-cover border flex-shrink-0" />
                       <div class="flex-1">
                           <div class="flex items-center gap-2 mb-1">
                               <span class="font-semibold text-sm text-gray-900">${escapeHtml(comment.user)}</span>
@@ -1118,8 +1162,14 @@
       }
   async function loadPosts() {
         console.log('Loading posts...');
+        const container = document.getElementById('posts-container');
+        displayPageSection({ showLoading: true, showError: false, showEmpty: false });
+        updateFilterButtonsAppearance();
         try {
-          const response = await fetch('/post/api/posts/', {
+          const filterMap = { my: 'my', bookmark: 'bookmarked', liked: 'liked' };
+          const filterParam = filterMap[activeFilter] || '';
+          const query = filterParam ? `?filter=${filterParam}` : '';
+          const response = await fetch(`/post/api/posts/${query}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -1131,13 +1181,7 @@
 
           const data = await response.json();
           allPostData = data.posts || [];
-          updateFilterButtonsAppearance();
-          if (activeFilter === 'my') allPostData = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
-          else if (activeFilter === 'bookmark') allPostData = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
-          else if (activeFilter === 'liked') allPostData = allPostData.filter(post => post.user_id === CURRENT_USER_ID);
-          if (allPostData.length === 0) displayPageSection({ showEmpty: true });
           console.log('Posts data received:', data);
-          const container = document.getElementById('posts-container');
           const loading = document.getElementById('loading-posts');
           if (loading) loading.remove();
 
@@ -1145,16 +1189,19 @@
             // Render posts directly without ads
             container.innerHTML = allPostData.map(post => createPostCard(post)).join('');
             initializePostInteractions();
+            displayPageSection({ showLoading: false, showError: false, showEmpty: false });
           } else {
             console.log('No posts found');
-            showNoPostsMessage(container);
+            container.innerHTML = '';
+            displayPageSection({ showLoading: false, showError: false, showEmpty: true });
           }
         } catch (error) {
           console.error('Error loading posts:', error);
           showErrorState(document.getElementById('posts-container'));
-        }finally {
-      displayPageSection({ showLoading: false });
-      }
+          displayPageSection({ showLoading: false, showError: true, showEmpty: false });
+        } finally {
+          displayPageSection({ showLoading: false });
+        }
       }
 
   function handleShowMyPostClick() { activeFilter = 'my'; loadPosts() }

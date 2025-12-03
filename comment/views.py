@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from .models import Comment, CommentInteraction
+from profil.models import Profile
 from post.models import Post
 from report.models import Report
 
@@ -36,6 +37,16 @@ class CommentAPIView(View):
         AJAX Support: ✅
         """
         try:
+            profile_cache = {}
+
+            def get_profile_photo_url(user):
+                if user.id in profile_cache:
+                    return profile_cache[user.id]
+                profile = Profile.objects.filter(user=user).first()
+                url = profile.profile_photo.url if profile and profile.profile_photo else None
+                profile_cache[user.id] = url
+                return url
+
             if comment_id:
                 # Get single comment
                 comment = Comment.objects.get(id=comment_id, is_deleted=False)
@@ -52,6 +63,7 @@ class CommentAPIView(View):
                     "updated_at": comment.updated_at.isoformat(),
                     "likes_count": comment.likes_count,
                     "is_reply": comment.is_reply,
+                    "profile_photo": get_profile_photo_url(comment.user),
                     "can_edit": self.get_user_permissions(request.user, comment)[0]
                     or self.get_user_permissions(request.user, comment)[1],
                     "replies": [],
@@ -65,6 +77,7 @@ class CommentAPIView(View):
                                 "id": reply.id,
                                 "content": reply.content,
                                 "user": reply.user.username,
+                                "profile_photo": get_profile_photo_url(reply.user),
                                 "created_at": reply.created_at.isoformat(),
                             }
                         )
@@ -102,6 +115,7 @@ class CommentAPIView(View):
                         "emoji": comment.emoji,
                         "user": comment.user.username,
                         "user_id": comment.user.id,
+                        "profile_photo": get_profile_photo_url(comment.user),
                         "created_at": comment.created_at.isoformat(),
                         "updated_at": comment.updated_at.isoformat(),
                         "likes_count": comment.likes_count,
@@ -123,6 +137,7 @@ class CommentAPIView(View):
                                 "content": reply.content,
                                 "user": reply.user.username,
                                 "user_id": reply.user.id,
+                                "profile_photo": get_profile_photo_url(reply.user),
                                 "created_at": reply.created_at.isoformat(),
                                 "can_edit": self.get_user_permissions(
                                     request.user, reply

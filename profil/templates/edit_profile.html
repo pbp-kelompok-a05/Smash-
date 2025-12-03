@@ -8,44 +8,82 @@
 {% block content %}
 <div class="bg-gray-50 w-full min-h-screen">
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    
+
     <!-- Back Navigation -->
     <div class="mb-6">
       <a href="{% url 'profil:show_views' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">
-        ← Back to Profile
+        <- Back to Profile
       </a>
     </div>
-    
+
     <!-- Form -->
     <div class="bg-white rounded-lg border border-gray-200 p-6 sm:p-8 form-style">
       <div class="mb-8">
         <h1 class="text-2xl font-bold text-gray-900 mb-2">Edit Profile</h1>
       </div>
-      
-      <form method="POST" class="space-y-6">
-        {% csrf_token %}
-        {% for field in form %}
-          <div>
-            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-              {{ field.label }}
-            </label>
-            <div class="w-full">
-              {{ field }}
+
+      {% if show_messages and messages %}
+        <div class="mb-6 space-y-2">
+          {% for message in messages %}
+            <div class="px-4 py-3 rounded-md text-sm {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200{% else %}bg-red-50 text-red-700 border border-red-200{% endif %}">
+              {{ message }}
             </div>
-            {% if field.help_text %}
-              <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
-            {% endif %}
-            {% for error in field.errors %}
-              <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-            {% endfor %}
-          </div>
-        {% endfor %}
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if form.non_field_errors %}
+        <div class="mb-4 px-4 py-3 rounded-md text-sm bg-red-50 text-red-700 border border-red-200">
+          {{ form.non_field_errors|join:", " }}
+        </div>
+      {% endif %}
+
+      <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        <!-- Field username -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+          <input type="text" name="username" value="{{ request.POST.username|default:request.user.username }}"
+            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring focus:border-green-500">
+        </div>
+
+        <!-- Field bio -->
+        <div>
+          <label for="{{ form.bio.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+            Bio
+          </label>
+          <textarea name="bio" id="{{ form.bio.id_for_label }}" rows="4"
+            class="w-full border border-gray-300 rounded-md px-4 py-3 focus:ring focus:border-green-500">{{ form.instance.bio|default_if_none:"" }}</textarea>
+          {% if form.bio.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.bio.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Field photo -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+          <input type="file" name="profile_photo" accept="image/*"
+            class="w-full text-sm text-gray-600 file:mr-4 file:px-4 file:py-2 file:border file:border-gray-300 file:rounded-md file:bg-white hover:file:bg-gray-50 transition">
+          {% if form.profile_photo.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.profile_photo.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+
         
+        <!-- Field password -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+          <input type="password" name="password" placeholder="Leave empty if not changing"
+            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring focus:border-green-500">
+        </div>
+
+
         <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
-          <a href="{% url 'profil:show_views' %}" class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">
+          <a href="{% url 'profil:show_views' %}"
+            class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">
             Cancel
           </a>
-          <button type="submit" class="order-1 sm:order-2 flex-1 bg-green-600 text-white px-6 py-3 rounded-md font-medium hover:bg-green-700 transition-colors">
+          <button type="submit"
+            class="order-1 sm:order-2 flex-1 bg-green-600 text-white px-6 py-3 rounded-md font-medium hover:bg-green-700 transition-colors">
             Update Profile
           </button>
         </div>

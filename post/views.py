@@ -16,6 +16,7 @@ from report.models import Report
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
+from profil.models import Profile
 
 User = get_user_model()
 
@@ -42,6 +43,29 @@ class PostAPIView(View):
         AJAX Support: ✅
         """
         try:
+            user_interactions = {}
+            saved_post_ids = set()
+            profile_cache = {}
+
+            def get_profile_photo_url(user):
+                if user.id in profile_cache:
+                    return profile_cache[user.id]
+                profile = Profile.objects.filter(user=user).first()
+                url = profile.profile_photo.url if profile and profile.profile_photo else None
+                profile_cache[user.id] = url
+                return url
+
+            if request.user.is_authenticated:
+                user_interactions = dict(
+                    PostInteraction.objects.filter(user=request.user).values_list(
+                        "post_id", "interaction_type"
+                    )
+                )
+                saved_post_ids = set(
+                    PostSave.objects.filter(user=request.user).values_list(
+                        "post_id", flat=True
+                    )
+                )
             if post_id:
                 # Get single post
                 post = Post.objects.get(id=post_id, is_deleted=False)
@@ -60,15 +84,10 @@ class PostAPIView(View):
                     )
 
                 # Get user interaction if authenticated
-                user_interaction = None
-                if request.user.is_authenticated:
-                    try:
-                        interaction = PostInteraction.objects.get(
-                            user=request.user, post=post
-                        )
-                        user_interaction = interaction.interaction_type
-                    except PostInteraction.DoesNotExist:
-                        pass
+                user_interaction = (
+                    user_interactions.get(post.id) if request.user.is_authenticated else None
+                )
+                is_saved = post.id in saved_post_ids if request.user.is_authenticated else False
 
                 post_data = {
                     "id": post.id,
@@ -84,7 +103,9 @@ class PostAPIView(View):
                     "likes_count": post.likes_count,
                     "dislikes_count": post.dislikes_count,
                     "shares_count": post.shares_count,
+                    "profile_photo": get_profile_photo_url(post.user),
                     "user_interaction": user_interaction,
+                    "is_saved": is_saved,
                     "can_edit": self.get_user_permissions(request.user, post)[0]
                     or self.get_user_permissions(request.user, post)[1],
                 }
@@ -107,22 +128,34 @@ class PostAPIView(View):
                 else:
                     posts = Post.objects.filter(is_deleted=False)
 
+                filter_by = request.GET.get("filter")
+                if filter_by:
+                    if not request.user.is_authenticated:
+                        posts = Post.objects.none()
+                    elif filter_by == "my":
+                        posts = posts.filter(user=request.user)
+                    elif filter_by == "bookmarked":
+                        posts = posts.filter(id__in=saved_post_ids)
+                    elif filter_by == "liked":
+                        liked_post_ids = [
+                            post_id
+                            for post_id, action in user_interactions.items()
+                            if action == "like"
+                        ]
+                        posts = posts.filter(id__in=liked_post_ids)
+
                 # Apply ordering
                 sort_by = request.GET.get("sort_by", "-created_at")
                 posts = posts.order_by(sort_by)
 
                 posts_data = []
                 for post in posts[start:end]:
-                    # Get user interaction if authenticated
-                    user_interaction = None
-                    if request.user.is_authenticated:
-                        try:
-                            interaction = PostInteraction.objects.get(
-                                user=request.user, post=post
-                            )
-                            user_interaction = interaction.interaction_type
-                        except PostInteraction.DoesNotExist:
-                            pass
+                    user_interaction = (
+                        user_interactions.get(post.id)
+                        if request.user.is_authenticated
+                        else None
+                    )
+                    is_saved = post.id in saved_post_ids if request.user.is_authenticated else False
 
                     posts_data.append(
                         {
@@ -134,6 +167,7 @@ class PostAPIView(View):
                             "user": post.user.username,
                             "user_id": post.user.id,
                             "created_at": post.created_at.isoformat(),
+                            "profile_photo": get_profile_photo_url(post.user),
                             "comment_count": post.comments.filter(
                                 is_deleted=False
                             ).count(),
@@ -141,6 +175,7 @@ class PostAPIView(View):
                             "dislikes_count": post.dislikes_count,
                             "shares_count": post.shares_count,
                             "user_interaction": user_interaction,
+                            "is_saved": is_saved,
                             "can_edit": self.get_user_permissions(request.user, post)[0]
                             or self.get_user_permissions(request.user, post)[1],
                         }
@@ -467,7 +502,7 @@ def edit_post_page(request, post_id):
 
 class PostInteractionView(View):
     """
-    View untuk handling post interactions (like, share, report)
+    View untuk handling post interactions (like, save, share, report)
     Mendukung AJAX requests.
     """
 
@@ -478,7 +513,7 @@ class PostInteractionView(View):
     @method_decorator(require_http_methods(["POST"]))
     def post(self, request, post_id, action):
         """
-        POST: Handle post interactions (like, share, report)
+        POST: Handle post interactions (like, save, share, report)
         AJAX Support: ✅
         """
         try:
@@ -559,6 +594,29 @@ class PostInteractionView(View):
                         "status": "success",
                         "message": "Post berhasil dilaporkan",
                         "report_id": report.id,
+                    }
+                )
+
+            elif action == "save":
+                existing_save = PostSave.objects.filter(user=request.user, post=post).first()
+                if existing_save:
+                    existing_save.delete()
+                    return JsonResponse(
+                        {
+                            "status": "success",
+                            "message": "Bookmark dihapus",
+                            "action": "removed",
+                            "is_saved": False,
+                        }
+                    )
+
+                PostSave.objects.create(user=request.user, post=post)
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "message": "Post disimpan",
+                        "action": "saved",
+                        "is_saved": True,
                     }
                 )
 

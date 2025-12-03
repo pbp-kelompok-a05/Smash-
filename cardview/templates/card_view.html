@@ -3,8 +3,15 @@
 <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6" data-post-id="{{ post.id }}">
   <!-- Header -->
   <header class="px-6 py-4 flex items-start gap-4">
+    {% with prof=post.user.profile_set.first %}
+    {% if prof and prof.profile_photo %}
+    <img src="{{ prof.profile_photo.url }}" alt="avatar"
+         class="w-12 h-12 rounded-full object-cover border" />
+    {% else %}
     <img src="{% static 'images/user-profile.png' %}" alt="avatar"
-         class="w-12 h-12 rounded-full object-cover" />
+         class="w-12 h-12 rounded-full object-cover border" />
+    {% endif %}
+    {% endwith %}
     <div class="flex-1">
       <div class="flex items-center gap-2 flex-wrap">
         <h3 class="font-semibold text-lg text-gray-900">{{ post.title }}</h3>
