@@ -1,5 +1,6 @@
 # post/models.py
 from django.db import models
+import uuid
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
@@ -12,6 +13,7 @@ class Post(models.Model):
     Mendukung CRUD lengkap dan akses superuser.
     """
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

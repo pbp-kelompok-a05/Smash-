@@ -173,13 +173,21 @@ class CommentAPIView(View):
                     status=401,
                 )
 
-            if not post_id:
+            if not post_id and not comment_id:
                 return JsonResponse(
-                    {"status": "error", "message": "Post ID is required"},
+                    {"status": "error", "message": "Post ID or Comment ID is required"},
                     status=400,
                 )
 
-            post = Post.objects.get(id=post_id, is_deleted=False)
+            if comment_id:
+                # Case: Reply to a comment (via URL)
+                parent_comment = Comment.objects.get(id=comment_id, is_deleted=False)
+                post = parent_comment.post
+            else:
+                # Case: New comment on a post
+                post = Post.objects.get(id=post_id, is_deleted=False)
+                parent_comment = None
+
             data = json.loads(request.body)
 
             # Validasi required fields
@@ -198,8 +206,11 @@ class CommentAPIView(View):
             }
 
             # Handle nested comments (replies)
-            parent_id = data.get("parent_id")
-            if parent_id:
+            # Priority: comment_id from URL > parent_id from body
+            if comment_id:
+                comment_data["parent"] = parent_comment
+            elif data.get("parent_id"):
+                parent_id = data.get("parent_id")
                 parent_comment = Comment.objects.get(id=parent_id, is_deleted=False)
                 comment_data["parent"] = parent_comment
 
