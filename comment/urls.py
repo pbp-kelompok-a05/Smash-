@@ -1,6 +1,7 @@
 # comment/urls.py
 from django.urls import path
 from . import views
+from post.views import show_json
 
 app_name = 'comment'
 
@@ -64,4 +65,5 @@ urlpatterns = [
     path('user/liked-comments/', 
          views.CommentAPIView.as_view(), 
          name='user-liked-comments'),
+    path('json/', show_json, name='show_json'),
 ]
