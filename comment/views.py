@@ -506,3 +506,32 @@ class CommentInteractionView(View):
                 {"status": "error", "message": f"Error processing action: {str(e)}"},
                 status=500,
             )
+def show_json(request):
+    comment_list= Comment.objects.all()
+    interaction_list=CommentInteraction.objects.all()
+    comments_data=[
+        {
+            'id': str(comment.id),
+            'post_id': comment.post.id,
+            'parent_id': comment.parent.id,
+            'user_id': comment.user_id,
+            'content': comment.content,
+            'emoji':comment.emoji,
+            'created_at': comment.created_at.isoformat() if comment.created_at else None,
+            'updated_at': comment.updated_at.isoformat() if comment.updated_at else None,
+            'is_deleted': comment.is_deleted,
+            "likes_count": comment.likes_count,
+            "dislikes_count": comment.dislikes_count,
+        }
+        for comment in comment_list
+    ]
+    interaction_data= [
+        {
+            'comment_id': str(interaction.comment.id),
+            'user_id': interaction.user_id,
+            'interaction_type': interaction.interaction_type,
+            'created_at': interaction.created_at.isoformat() if interaction.created_at else None,
+        }
+        for interaction in interaction_list
+    ]
+    
