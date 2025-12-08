@@ -1,5 +1,6 @@
 # comment/models.py
 from django.db import models
+import uuid
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -11,6 +12,7 @@ class Comment(models.Model):
     Mendukung nested comments dan akses superuser.
     """
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Pengguna", related_name="comments"
     )
