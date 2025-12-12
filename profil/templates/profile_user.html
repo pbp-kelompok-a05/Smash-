@@ -26,7 +26,7 @@
       <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#"><span class="text-xl">🔥</span> Hot Thread</a>
 
       <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Menu</div>
-      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🔔 Notification</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="{% url 'post:notifications' %}">🔔 Notification</a>
       <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">🔖 Bookmark</a>
       <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-pink-50 text-pink-700 font-medium" href="{% url 'profil:show_views' %}">👤 Profile</a>
       <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100" href="#">✉️ Message</a>
@@ -62,9 +62,11 @@
         <div class="hidden lg:flex items-center">
               <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="h-8 w-auto">
         </div>
-        <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl">
+        <form class="flex items-center bg-white rounded-full px-4 py-2 shadow-sm w-full max-w-2xl"
+              action="{% url 'post:search_posts' %}" method="get">
           <svg xmlns="http://www.w3.org/2000/svg " class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd" /></svg>
-          <input type="search" placeholder="Search..." class="ml-3 outline-none w-full text-sm" />
+          <input type="search" name="q" value="{{ request.GET.q|default:'' }}"
+                 placeholder="Search..." class="ml-3 outline-none w-full text-sm" />
         </form>
       </div>
 
@@ -92,26 +94,40 @@
         <div class="bg-white rounded-xl p-6 shadow mb-6">
           <div class="flex items-center space-x-6">
             {% if profile and profile.profile_photo %}
-              <img src="{{ profile.profile_photo.url }}" alt="Profil {{ user.username }}" class="rounded-full w-20 h-20 object-cover border" />
+              <img src="{{ profile.profile_photo.url }}" alt="Profil {{ profile_user.username }}" class="rounded-full w-20 h-20 object-cover border" />
             {% else %}
               <img src="{% static 'images/user-profile.png' %}" alt="Profil" class="rounded-full w-20 h-20 object-cover border" />
             {% endif %}
             <div>
-              <h2 class="text-lg">Hello,</h2>
-              <h1 id="profile-name" class="text-4xl font-extrabold">{{ user.username }}</h1>
-              <p id="user-bio" class="text-gray-600 mt-1">{{ bio|default:"Belum ada bio" }}</p>
+              {% if is_owner %}
+                <h2 class="text-lg">Hello,</h2>
+                <h1 id="profile-name" class="text-4xl font-extrabold">{{ profile_user.username }}</h1>
+                <p id="user-bio" class="text-gray-600 mt-1">{{ bio|default:"Belum ada bio" }}</p>
+              {% else %}
+                <h1 id="profile-name" class="text-3xl font-extrabold">{{ profile_user.username }}</h1>
+                <p class="text-gray-500 mt-1">Joined {{ profile_user.date_joined|date:"M d, Y" }}</p>
+                {% if bio %}
+                  <p id="user-bio" class="text-gray-600 mt-1">{{ bio }}</p>
+                {% endif %}
+              {% endif %}
             </div>
           </div>
 
+          {% if is_owner %}
           <a href="{% url 'profil:edit_or_create_profile' %}" class="inline-block mt-4">
             <button class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">+ edit profile</button>
           </a>
+          {% endif %}
 
-          <div class="flex gap-3 mt-4">
-            <button id="filter-my" class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">My Posts</button>
-            <button id="filter-bookmark" class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Bookmark</button>
-            <button id="filter-like" class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Liked</button>
-          </div>
+          {% if is_owner %}
+            <div class="flex gap-3 mt-4">
+              <button id="filter-my" class="px-4 py-2 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition">
+                My Posts
+              </button>
+              <button id="filter-bookmark" class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Bookmark</button>
+              <button id="filter-like" class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Liked</button>
+            </div>
+          {% endif %}
         </div>
 
         <section class="max-w-4xl mx-auto" id="posts-container">
@@ -372,6 +388,8 @@
 
   // Profile-page post logic
   const CURRENT_USER_ID = {{ user.id|default:"null" }};
+  const PROFILE_USER_ID = {{ profile_user.id|default:"null" }};
+  const IS_PROFILE_OWNER = {{ is_owner|yesno:"true,false" }};
   const DEFAULT_AVATAR = "{% static 'images/user-profile.png' %}";
   const postContainer = document.getElementById('posts-list');
   const showMyPostButton = document.getElementById('filter-my');
@@ -386,9 +404,15 @@
 
   function updateFilterButtonsAppearance() {
     const base = 'px-4 py-2 rounded-lg font-medium transition';
-    showMyPostButton.className = base + (activeFilter === 'my' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
-    showMyBookmarkButton.className = base + (activeFilter === 'bookmark' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
-    showMyLikesButton.className = base + (activeFilter === 'liked' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+    if (showMyPostButton) {
+      showMyPostButton.className = base + (activeFilter === 'my' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+    }
+    if (showMyBookmarkButton) {
+      showMyBookmarkButton.className = base + (activeFilter === 'bookmark' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+    }
+    if (showMyLikesButton) {
+      showMyLikesButton.className = base + (activeFilter === 'liked' ? ' text-white bg-blue-500 hover:bg-blue-600' : ' text-gray-700 bg-gray-100 hover:bg-gray-200');
+    }
   }
 
   function displayPageSection({ showLoading, showError, showEmpty }) {
@@ -501,16 +525,19 @@
         }
 
         const avatarSrc = post.profile_photo || DEFAULT_AVATAR;
+        const profileUrl = post.user_id ? `/profil/${post.user_id}/` : '#';
 
         return `
             <div class="post-card" data-post-id="${post.id}">
                 <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
                     <header class="px-6 py-4 flex items-start gap-4">
-                        <img src="${avatarSrc}" alt="avatar" class="w-12 h-12 rounded-full object-cover border" />
+                        <a href="${profileUrl}" class="block flex-shrink-0">
+                            <img src="${avatarSrc}" alt="avatar" class="w-12 h-12 rounded-full object-cover border" />
+                        </a>
                         <div class="flex-1">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h3 class="font-semibold text-lg text-gray-900">${escapeHtml(post.title)}</h3>
-                                <span class="text-xs text-gray-500">• ${escapeHtml(post.user)}</span>
+                                <a href="${profileUrl}" class="text-xs text-gray-500 hover:text-purple-600 font-semibold">• ${escapeHtml(post.user)}</a>
                                 <span class="text-xs text-gray-400">| ${formatDate(post.created_at)}</span>
                                 ${editButtons}
                             </div>
@@ -1166,10 +1193,16 @@
         displayPageSection({ showLoading: true, showError: false, showEmpty: false });
         updateFilterButtonsAppearance();
         try {
+          if (!IS_PROFILE_OWNER && activeFilter !== 'my') {
+            activeFilter = 'my';
+          }
           const filterMap = { my: 'my', bookmark: 'bookmarked', liked: 'liked' };
           const filterParam = filterMap[activeFilter] || '';
-          const query = filterParam ? `?filter=${filterParam}` : '';
-          const response = await fetch(`/post/api/posts/${query}`, {
+          const params = new URLSearchParams();
+          if (filterParam) params.set('filter', filterParam);
+          if (PROFILE_USER_ID) params.set('user_id', PROFILE_USER_ID);
+          const query = params.toString() ? `?${params.toString()}` : '';
+          const response = await fetch(`/profil/api/profile-posts/${query}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -1180,7 +1213,7 @@
           if (!response.ok) throw new Error('Network response was not ok');
 
           const data = await response.json();
-          allPostData = data.posts || [];
+          allPostData = data.data || data.posts || [];
           console.log('Posts data received:', data);
           const loading = document.getElementById('loading-posts');
           if (loading) loading.remove();

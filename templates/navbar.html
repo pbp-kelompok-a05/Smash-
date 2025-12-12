@@ -16,7 +16,7 @@
 
   <!-- Kolom pencarian -->
   <div class="navbar-search">
-    <form id="searchForm" action="{% url 'search_posts' %}" method="GET" style="display:flex;align-items:center;width:100%;">
+    <form id="searchForm" action="{% url 'post:search_posts' %}" method="GET" style="display:flex;align-items:center;width:100%;">
       <i class="fas fa-search"></i>
       <input 
         type="text" 
@@ -32,10 +32,10 @@
   <div class="navbar-right">
     {% if user.is_authenticated %}
       <!-- Tombol create post -->
-      <a href="{% url 'create_post' %}" class="create-post-btn desktop-only">
+      <a href="{% url 'main:home' %}" class="create-post-btn desktop-only">
         <i class="fas fa-plus"></i> Create a post
       </a>
-      <a href="{% url 'create_post' %}" class="create-post-btn mobile-only" title="Create Post">
+      <a href="{% url 'main:home' %}" class="create-post-btn mobile-only" title="Create Post">
         <i class="fas fa-plus"></i>
       </a>
 
@@ -53,7 +53,7 @@
             <a href="{% url 'profil:show_views' %}" class="dropdown-item">Profile</a>
           </li>
           <li>
-            <form id="logout-form" method="POST" action="{% url 'logout_ajax' %}">
+          <form id="logout-form" method="POST" action="{% url 'account:logout_ajax' %}">
               {% csrf_token %}
               <button type="submit" class="logout-btn">Logout</button>
             </form>
@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", function() {
   if (logoutForm) {
     logoutForm.addEventListener("submit", async function(e) {
       e.preventDefault();
-      const res = await fetch("{% url 'logout_ajax' %}", {
+      const res = await fetch("{% url 'account:logout_ajax' %}", {
         method: "POST",
         headers: {"X-CSRFToken": "{{ csrf_token }}"},
       });

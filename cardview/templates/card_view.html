@@ -1,21 +1,25 @@
 {% load static %}
 
-<article class="bg-white rounded-xl overflow-hidden card-shadow mb-6" data-post-id="{{ post.id }}">
+<article class="post-card bg-white rounded-xl overflow-hidden card-shadow mb-6" data-post-id="{{ post.id }}">
   <!-- Header -->
   <header class="px-6 py-4 flex items-start gap-4">
     {% with prof=post.user.profile_set.first %}
-    {% if prof and prof.profile_photo %}
-    <img src="{{ prof.profile_photo.url }}" alt="avatar"
-         class="w-12 h-12 rounded-full object-cover border" />
-    {% else %}
-    <img src="{% static 'images/user-profile.png' %}" alt="avatar"
-         class="w-12 h-12 rounded-full object-cover border" />
-    {% endif %}
+    <a href="{% url 'profil:user_profile' post.user.id %}" class="block flex-shrink-0">
+      {% if prof and prof.profile_photo %}
+      <img src="{{ prof.profile_photo.url }}" alt="avatar"
+           class="w-12 h-12 rounded-full object-cover border interactive-btn" />
+      {% else %}
+      <img src="{% static 'images/user-profile.png' %}" alt="avatar"
+           class="w-12 h-12 rounded-full object-cover border interactive-btn" />
+      {% endif %}
+    </a>
     {% endwith %}
     <div class="flex-1">
       <div class="flex items-center gap-2 flex-wrap">
         <h3 class="font-semibold text-lg text-gray-900">{{ post.title }}</h3>
-        <span class="text-xs text-gray-500">• {{ post.user.username }}</span>
+        <a href="{% url 'profil:user_profile' post.user.id %}" class="text-xs text-gray-500 hover:text-purple-600 font-semibold">
+          • {{ post.user.username }}
+        </a>
         <span class="text-xs text-gray-400">| {{ post.created_at|date:"M d, Y" }}</span>
         {% if post.can_edit %}
         <div class="flex items-center gap-2 ml-auto">
@@ -27,8 +31,8 @@
         {% endif %}
       </div>
 
-      <div class="post-content mt-2">
-        <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+      <div class="post-content mt-2 text-gray-700 leading-relaxed">
+        {{ post.content|linebreaksbr }}
       </div>
     </div>
   </header>
@@ -102,62 +106,61 @@
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-6 text-gray-600 text-sm">
         <div class="flex items-center gap-2">
-          <span class="font-medium post-likes-count">{{ post.likes_count }}</span><span>likes</span>
+          <span class="font-medium post-likes-count">{{ post.likes_count }}</span>
+          <span>likes</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="font-medium post-dislikes-count">{{ post.dislikes_count }}</span><span>dislikes</span>
+          <span class="font-medium post-dislikes-count">{{ post.dislikes_count }}</span>
+          <span>dislikes</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="font-medium">{{ post.comment_count }}</span><span>comments</span>
+          <span class="font-medium">{{ post.comment_count }}</span>
+          <span>comments</span>
         </div>
       </div>
     </div>
 
     <div class="flex items-center justify-between border-t border-gray-100 pt-3">
-      <div class="flex items-center gap-6">
-        <button class="like-btn flex items-center gap-2 text-gray-600 hover:text-pink-600 text-sm transition-colors"
-                data-post-id="{{ post.id }}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017l-4.246-.06L7 20V11l4.392-5.189c.397-.594.608-1.292.608-2.006 0-.5.405-.905.905-.905H12a2 2 0 012 2v5z"/>
+      <div class="flex items-center gap-4 flex-wrap">
+        <!-- Like Button -->
+        <button class="like-btn flex items-center gap-2 {% if post.user_interaction == 'like' %}text-pink-600{% else %}text-gray-600 hover:text-pink-600{% endif %} transition-colors text-sm interactive-btn" 
+                data-post-id="{{ post.id }}" title="Like this post">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 like-icon {% if post.user_interaction == 'like' %}fill-pink-600{% endif %}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
           </svg>
-          Like
+          <span class="like-text">{% if post.user_interaction == 'like' %}Liked{% else %}Like{% endif %}</span>
         </button>
 
-        <button class="dislike-btn flex items-center gap-2 text-gray-600 hover:text-red-600 text-sm transition-colors"
-                data-post-id="{{ post.id }}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4v9l-4.392 5.189c-.397.594-.608 1.292-.608 2.006 0 .5-.405.905-.905.905H12a2 2 0 01-2-2v-5z"/>
+        <!-- Dislike Button -->
+        <button class="dislike-btn flex items-center gap-2 {% if post.user_interaction == 'dislike' %}text-red-600{% else %}text-gray-600 hover:text-red-600{% endif %} transition-colors text-sm interactive-btn" 
+                data-post-id="{{ post.id }}" title="Dislike this post">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 dislike-icon {% if post.user_interaction == 'dislike' %}fill-red-600{% endif %}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4v9l-4.392 5.189c-.397.594-.608 1.292-.608 2.006 0 .5-.405.905-.905.905H12a2 2 0 01-2-2v-5z"/>
           </svg>
-          Dislike
+          <span class="dislike-text">{% if post.user_interaction == 'dislike' %}Disliked{% else %}Dislike{% endif %}</span>
         </button>
 
-        <button class="comment-btn flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors text-sm"
-                data-post-id="{{ post.id }}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z"/>
+        <!-- Comment Button -->
+        <button class="comment-btn flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors text-sm interactive-btn" 
+                data-post-id="{{ post.id }}" title="View comments">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 3.866-4.485 7-10 7S1 15.866 1 12 5.485 5 11 5s10 3.134 10 7z" />
           </svg>
           Comment
         </button>
 
-        <button class="save-btn flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors text-sm"
-                data-post-id="{{ post.id }}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M5 3v16l7-5 7 5V3z"/>
+        <!-- Save Button -->
+        <button class="save-btn flex items-center gap-2 transition-colors text-sm interactive-btn {% if post.is_saved %}text-green-600{% else %}text-gray-600 hover:text-green-600{% endif %}" 
+                data-post-id="{{ post.id }}" title="Save post">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {% if post.is_saved %}fill-green-600{% endif %}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v16l7-5 7 5V3z"/>
           </svg>
-          Save
+          <span class="save-text">{% if post.is_saved %}Saved{% else %}Save{% endif %}</span>
         </button>
       </div>
 
-      <button class="share-btn flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors text-sm"
-              data-post-id="{{ post.id }}">
+      <button class="share-btn flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors text-sm interactive-btn"
+              data-post-id="{{ post.id }}" title="Share post">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
              fill="none" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -169,8 +172,37 @@
       </button>
     </div>
   </footer>
-</article>
 
+  <!-- Comments Section -->
+  <div class="comments-section mt-4 hidden" id="comments-{{ post.id }}">
+    {% if user.is_authenticated %}
+    <div class="mb-4 pb-4 border-b border-gray-100">
+      <form class="add-comment-form" data-post-id="{{ post.id }}">
+        <div class="flex gap-3 items-start">
+          {% with user_prof=user.profile_set.first %}
+          {% if user_prof and user_prof.profile_photo %}
+          <img src="{{ user_prof.profile_photo.url }}" alt="Your avatar" class="w-8 h-8 rounded-full object-cover border flex-shrink-0" />
+          {% else %}
+          <img src="{% static 'images/user-profile.png' %}" alt="Your avatar" class="w-8 h-8 rounded-full object-cover border flex-shrink-0" />
+          {% endif %}
+          {% endwith %}
+          <div class="flex-1 flex flex-col gap-2">
+            <textarea placeholder="Write a comment..." class="comment-input flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none" rows="2" required></textarea>
+            <div class="flex justify-end">
+              <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center gap-2">
+                <span>Post Comment</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="comments-list space-y-4"></div>
+    <div class="loading-comments text-sm text-gray-400 hidden">Loading comments...</div>
+  </div>
+</article>
 
 <script>
 // Scope handlers to this specific card instance only
@@ -201,20 +233,30 @@
   const shareBtn = card.querySelector('.share-btn');
   const likesCountEl = card.querySelector('.post-likes-count');
   const dislikesCountEl = card.querySelector('.post-dislikes-count');
+  const commentBtn = card.querySelector('.comment-btn');
+  const commentsSection = document.getElementById(`comments-${postId}`);
+  const commentsList = commentsSection ? commentsSection.querySelector('.comments-list') : null;
+  const loadingComments = commentsSection ? commentsSection.querySelector('.loading-comments') : null;
 
   function toggleLikeButtonView(btn, isActive) {
     if (!btn) return;
     const text = btn.querySelector('.like-text');
+    const icon = btn.querySelector('.like-icon');
     btn.classList.toggle('text-pink-600', isActive);
     btn.classList.toggle('text-gray-600', !isActive);
+    btn.classList.toggle('hover:text-pink-600', !isActive);
+    if (icon) icon.classList.toggle('fill-pink-600', isActive);
     if (text) text.textContent = isActive ? 'Liked' : 'Like';
   }
 
   function toggleDislikeButtonView(btn, isActive) {
     if (!btn) return;
     const text = btn.querySelector('.dislike-text');
+    const icon = btn.querySelector('.dislike-icon');
     btn.classList.toggle('text-red-600', isActive);
     btn.classList.toggle('text-gray-600', !isActive);
+    btn.classList.toggle('hover:text-red-600', !isActive);
+    if (icon) icon.classList.toggle('fill-red-600', isActive);
     if (text) text.textContent = isActive ? 'Disliked' : 'Dislike';
   }
 
@@ -230,7 +272,7 @@
           if (likesCountEl) likesCountEl.textContent = data.likes_count;
           if (dislikesCountEl) dislikesCountEl.textContent = data.dislikes_count;
           toggleLikeButtonView(likeBtn, data.user_interaction === 'like');
-          toggleDislikeButtonView(dislikeBtn, false);
+          toggleDislikeButtonView(dislikeBtn, data.user_interaction === "dislike");
         } else if (res.status === 401) {
           alert('Silakan login untuk menyukai post.');
         }
@@ -250,7 +292,7 @@
           if (likesCountEl) likesCountEl.textContent = data.likes_count;
           if (dislikesCountEl) dislikesCountEl.textContent = data.dislikes_count;
           toggleDislikeButtonView(dislikeBtn, data.user_interaction === 'dislike');
-          toggleLikeButtonView(likeBtn, false);
+          toggleLikeButtonView(likeBtn, data.user_interaction === 'like');
         } else if (res.status === 401) {
           alert('Silakan login untuk tidak menyukai post.');
         }
@@ -268,18 +310,91 @@
         const data = await res.json();
         if (data.status === 'success') {
           if (data.action === 'removed') {
-            // Saat undo (hapus bookmark), reload supaya kartu hilang dari daftar bookmark
             window.location.reload();
             return;
           }
           const isSaved = data.action === 'saved';
           const svg = saveBtn.querySelector('svg');
           saveBtn.classList.toggle('text-green-600', isSaved);
+          saveBtn.classList.toggle('text-gray-600', !isSaved);
+          saveBtn.classList.toggle('hover:text-green-600', !isSaved);
           if (svg) svg.classList.toggle('fill-green-600', isSaved);
+          const saveText = saveBtn.querySelector('.save-text');
+          if (saveText) saveText.textContent = isSaved ? 'Saved' : 'Save';
         } else if (res.status === 401) {
           alert('Silakan login untuk menyimpan post.');
         }
       } catch (e) { console.error('Save error', e); }
+    });
+  }
+
+  async function loadComments() {
+    if (!commentsList || !loadingComments) return;
+    loadingComments.classList.remove('hidden');
+    commentsList.innerHTML = '';
+    try {
+      const res = await fetch(`/comments/post/${postId}/`, { headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.comments)) {
+        if (!data.comments.length) {
+          commentsList.innerHTML = '<p class="text-sm text-gray-500">No comments yet.</p>';
+        } else {
+          commentsList.innerHTML = data.comments.map(c => `
+            <div class="flex gap-3">
+              <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600">${(c.user || '?')[0]?.toUpperCase() || '?'}</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 text-sm text-gray-700">
+                  <span class="font-semibold">${c.user || 'Unknown'}</span>
+                  <span class="text-gray-400 text-xs">${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
+                </div>
+                <p class="text-gray-700 text-sm mt-1 whitespace-pre-line">${(c.content || '').replace(/</g, '&lt;')}</p>
+              </div>
+            </div>
+          `).join('');
+        }
+      } else {
+        commentsList.innerHTML = '<p class="text-sm text-red-500">Failed to load comments.</p>';
+      }
+    } catch (err) {
+      commentsList.innerHTML = '<p class="text-sm text-red-500">Error loading comments.</p>';
+      console.error('Load comments error', err);
+    } finally {
+      loadingComments.classList.add('hidden');
+    }
+  }
+
+  function bindCommentForm() {
+    const form = commentsSection ? commentsSection.querySelector('.add-comment-form') : null;
+    if (!form) return;
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const textarea = this.querySelector('.comment-input');
+      const content = (textarea.value || '').trim();
+      if (!content) return;
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const original = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Posting...</span>';
+      try {
+        const res = await fetch(`/comments/post/${postId}/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+          body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          textarea.value = '';
+          await loadComments();
+        } else {
+          alert(data.message || 'Failed to post comment');
+        }
+      } catch (err) {
+        console.error('Post comment error', err);
+        alert('Error posting comment');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = original;
+      }
     });
   }
 
@@ -293,6 +408,17 @@
         alert('Link disalin ke clipboard');
       } else {
         prompt('Copy URL:', url);
+      }
+    });
+  }
+
+  if (commentBtn && commentsSection) {
+    commentBtn.addEventListener('click', () => {
+      const wasHidden = commentsSection.classList.contains('hidden');
+      commentsSection.classList.toggle('hidden');
+      if (wasHidden) {
+        loadComments();
+        bindCommentForm();
       }
     });
   }

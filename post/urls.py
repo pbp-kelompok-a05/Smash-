@@ -1,6 +1,8 @@
 # post/urls.py
 from django.urls import path
 from . import views
+from search import views as search_views
+from notifications import views as notifications_views
 
 app_name = 'post'
 
@@ -21,7 +23,7 @@ urlpatterns = [
     # =========================================================================
     
     # Halaman Pencarian
-    path('search/', views.search_posts, name='search_posts'),
+    path('search/', search_views.search_posts, name='search_posts'),
     # Halaman Edit Post
     path('edit/<int:post_id>/', views.edit_post_page, name='edit_post_page'),
     
@@ -33,6 +35,13 @@ urlpatterns = [
     
     # Halaman Thread Terbaru
     path('recent-threads/', views.recent_thread, name='recent_threads'),
+    
+    # Notifications
+    path('notifications/', notifications_views.notifications_view, name='notifications'),
+    path('api/notifications/', notifications_views.notifications_api, name='notifications_api'),
+    
+    # Search API
+    path('api/search/', search_views.search_posts_api, name='search_posts_api'),
     
     # Edit post
     path('edit/<int:post_id>/', views.edit_post, name='edit_post'),
