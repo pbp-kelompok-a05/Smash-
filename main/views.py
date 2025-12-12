@@ -8,6 +8,7 @@ import base64
 import uuid
 from post.models import Post, User
 from ads.models import Advertisement
+from comment.models import Comment
 import json
 
 
@@ -229,6 +230,57 @@ def create_post_flutter(request):
             {"message": "Post created successfully", "post_id": str(new_post.id)},
             status=201,
         )
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+def create_comment_flutter(request):
+    """
+    Endpoint to create a new comment from Flutter.
+    Expects JSON payload: post_id, content, user_id, optional parent_id
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid HTTP method"}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        post_id = data.get("post_id")
+        content = data.get("content")
+        user_id = data.get("user_id")
+        parent_id = data.get("parent_id")
+
+        if not post_id or not content or not user_id:
+            return JsonResponse({"error": "Missing fields"}, status=400)
+
+        p = Post.objects.get(id=post_id, is_deleted=False)
+        user = User.objects.get(id=user_id)
+
+        comment = Comment(user=user, post=p, content=content)
+        if parent_id:
+            try:
+                parent = Comment.objects.get(id=parent_id)
+                comment.parent = parent
+            except Comment.DoesNotExist:
+                pass
+
+        comment.save()
+        return JsonResponse(
+            {
+                "message": "Comment created",
+                "comment": {
+                    "id": str(comment.id),
+                    "content": comment.content,
+                    "author": getattr(comment.user, "username", None),
+                    "created_at": comment.created_at.isoformat(),
+                },
+            },
+            status=201,
+        )
+    except Post.DoesNotExist:
+        return JsonResponse({"error": "Post not found"}, status=404)
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=400)
     except Exception as e:

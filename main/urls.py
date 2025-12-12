@@ -11,4 +11,9 @@ urlpatterns = [
     path("json/post/<str:post_id>/", views.json_post_id, name="json_post_detail"),
     path("json/comments/<str:post_id>/", views.json_post_comments, name="json_ads"),
     path("create_flutter_post/", views.create_post_flutter, name="create_flutter_post"),
+    path(
+        "create_flutter_comment/",
+        views.create_comment_flutter,
+        name="create_flutter_comment",
+    ),
 ]
