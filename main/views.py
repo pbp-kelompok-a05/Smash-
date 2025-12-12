@@ -1,9 +1,11 @@
 # main/views.py
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from post.models import Post
+from post.models import Post, User
 from ads.models import Advertisement
+import json
 
 
 def home(request):
@@ -129,3 +131,42 @@ def json_post_comments(request, post_id):
         )
 
     return JsonResponse(comments_list, safe=False)
+
+
+@csrf_exempt
+def create_post_flutter(request):
+    """
+    Endpoint to create a new post from a Flutter mobile app.
+    Expects JSON payload with title, content, optional image and video_link.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid HTTP method"}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        title = data.get("title")
+        content = data.get("content")
+        image = data.get("image")  # Assuming image is handled separately
+        video_link = data.get("video_link", "")
+        user_id = data.get("user_id")  # Assuming user_id is passed in payload
+
+        user = User.objects.get(id=user_id)
+
+        new_post = Post(
+            user=user,
+            title=title,
+            content=content,
+            image=image,
+            video_link=video_link,
+        )
+        new_post.save()
+
+        return JsonResponse(
+            {
+                "message": "Post created successfully",
+                "post_id": str(new_post.id),
+            },
+            status=201,
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
