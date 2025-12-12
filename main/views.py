@@ -3,6 +3,9 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.core.files.base import ContentFile
+import base64
+import uuid
 from post.models import Post, User
 from ads.models import Advertisement
 import json
@@ -146,27 +149,87 @@ def create_post_flutter(request):
         data = json.loads(request.body)
         title = data.get("title")
         content = data.get("content")
-        image = data.get("image")  # Assuming image is handled separately
+        image_data = data.get("image")  # base64 string or data URI
         video_link = data.get("video_link", "")
         user_id = data.get("user_id")  # Assuming user_id is passed in payload
 
         user = User.objects.get(id=user_id)
 
-        new_post = Post(
-            user=user,
-            title=title,
-            content=content,
-            image=image,
-            video_link=video_link,
-        )
+        new_post = Post(user=user, title=title, content=content, video_link=video_link)
+
+        # If an image was sent as base64 (possibly with a data-uri prefix), decode, validate and save
+        if image_data:
+            try:
+                # Validation settings
+                MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+                ALLOWED_MIME = {
+                    "image/png",
+                    "image/jpeg",
+                    "image/jpg",
+                    "image/webp",
+                    "image/gif",
+                }
+
+                # If data URI, strip the prefix
+                if isinstance(image_data, str) and image_data.startswith("data:"):
+                    header, encoded = image_data.split(",", 1)
+                    try:
+                        mime = header.split(";")[0].split(":")[1]
+                    except Exception:
+                        mime = None
+                else:
+                    encoded = image_data
+                    mime = None
+
+                decoded = base64.b64decode(encoded)
+
+                # Size check
+                if len(decoded) > MAX_IMAGE_BYTES:
+                    return JsonResponse(
+                        {"error": "Image too large (max 5MB)"}, status=400
+                    )
+
+                # Determine mime if not provided — detect using magic bytes (avoid imghdr)
+                detected_mime = mime
+                if not detected_mime:
+
+                    def _detect_mime(data: bytes) -> str | None:
+                        if len(data) >= 8 and data[:8] == b"\x89PNG\r\n\x1a\n":
+                            return "image/png"
+                        if len(data) >= 2 and data[0:2] == b"\xff\xd8":
+                            return "image/jpeg"
+                        if len(data) >= 6 and (
+                            data[:6] == b"GIF87a" or data[:6] == b"GIF89a"
+                        ):
+                            return "image/gif"
+                        if (
+                            len(data) >= 12
+                            and data[0:4] == b"RIFF"
+                            and data[8:12] == b"WEBP"
+                        ):
+                            return "image/webp"
+                        return None
+
+                    detected_mime = _detect_mime(decoded)
+
+                if not detected_mime or detected_mime.lower() not in ALLOWED_MIME:
+                    return JsonResponse({"error": "Unsupported image type"}, status=400)
+
+                ext = detected_mime.split("/")[-1]
+                filename = f"post_{uuid.uuid4().hex[:12]}.{ext}"
+                new_post.image.save(filename, ContentFile(decoded), save=False)
+            except base64.binascii.Error:
+                return JsonResponse({"error": "Invalid base64 image data"}, status=400)
+            except Exception as ie:
+                return JsonResponse({"error": f"Invalid image data: {ie}"}, status=400)
+
         new_post.save()
 
         return JsonResponse(
-            {
-                "message": "Post created successfully",
-                "post_id": str(new_post.id),
-            },
+            {"message": "Post created successfully", "post_id": str(new_post.id)},
             status=201,
         )
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
