@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+{% static 'images/user-profile.png' as default_avatar %}
+<div class="bg-gradient-to-b from-white via-emerald-50 to-pink-50 min-h-screen">
+  <div class="min-h-screen flex">
+    <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-white/80 border-r border-gray-200 py-8 px-6 hidden lg:block backdrop-blur-sm">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold interactive-btn">
+                    S
+                </div>
+                <div>
+                    <div class="flex items-center">
+                        <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="h-8 w-auto">
+                    </div>
+                    <div class="text-xs text-gray-500">Community • Padel</div>
+                </div>
+            </div>
+            
+            <nav class="space-y-4 text-sm text-gray-700">
+                <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">Thread</div>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-pink-50 text-pink-700 font-medium interactive-btn"
+                   href="#">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8h18M3 16h18" />
+                    </svg>
+                    Recent
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    <span class="text-xl">🏷️</span> For You
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    <span class="text-xl">🔥</span> Hot Thread
+                </a>
+                
+                <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Menu</div>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="{% url 'post:notifications' %}">
+                    🔔 Notification
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    🔖 Bookmark
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" 
+                   href="{% url 'profil:show_views' %}">
+                    👤 Profile
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    ✉️ Message
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    🧩 Communities
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    ⚙️ Settings
+                </a>
+                
+                <div class="mt-6 text-xs text-gray-400 uppercase tracking-wide">Others</div>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    ℹ️ Tentang SMASH
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 interactive-btn" href="#">
+                    📞 Hubungi Kami
+                </a>
+                
+                <!-- Authentication Section -->
+                {% if user.is_authenticated %}
+                    <div class="mt-8 pt-4 border-t border-gray-200">
+                        <button id="logout-btn"
+                                class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 w-full text-left interactive-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="mt-8 pt-4 border-t border-gray-200 space-y-2">
+                        <a href="{% url 'account:login_register' %}"
+                           class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 w-full interactive-btn transition-colors">
+                            Register
+                        </a>
+                        <a href="{% url 'account:login_register' %}"
+                           class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 w-full interactive-btn transition-colors">
+                            Login
+                        </a>
+                    </div>
+                {% endif %}
+                
+                <div class="mt-8 text-xs text-gray-400">© 2025 SMASH. All rights reserved.</div>
+            </nav>
+        </aside>
+
+
+    <div class="flex-1 flex flex-col">
+      <!-- Header -->
+      <header class="flex items-center justify-between px-6 py-5 bg-transparent backdrop-blur-sm sticky top-0 z-10 border-b border-gray-200/50">
+        <div class="flex items-center gap-4">
+          <button class="lg:hidden p-2 rounded-md bg-white card-shadow interactive-btn">Menu</button>
+          <div class="hidden lg:flex items-center gap-4">
+            <img src="{% static 'images/logo-smash.png' %}" alt="Smash Logo" class="max-h-10 h-auto w-auto object-contain">
+          </div>
+          <div class="text-xl font-semibold text-gray-800">Notifications</div>
+        </div>
+      </header>
+
+      <!-- Notifications List -->
+      <main class="px-6 py-6">
+        <div class="max-w-4xl mx-auto space-y-4">
+          {% if notifications %}
+            {% for n in notifications %}
+              <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3 card-shadow">
+                {% if n.actor_id %}
+                  <a href="{% url 'profil:user_profile' n.actor_id %}" class="w-10 h-10 block rounded-full bg-gray-100 overflow-hidden border border-gray-200 flex-shrink-0">
+                    <img src="{{ n.actor_profile_photo|default:default_avatar }}" alt="{{ n.actor }}" class="w-full h-full object-cover">
+                  </a>
+                {% else %}
+                  <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 flex-shrink-0">
+                    <img src="{{ n.actor_profile_photo|default:default_avatar }}" alt="{{ n.actor }}" class="w-full h-full object-cover">
+                  </div>
+                {% endif %}
+                <div class="flex-1">
+                  <p class="text-sm text-gray-800">
+                    {% if n.actor_id %}
+                      <a href="{% url 'profil:user_profile' n.actor_id %}" class="font-semibold text-purple-700 hover:text-purple-900">@{{ n.actor }}</a>
+                    {% else %}
+                      <span class="font-semibold">@{{ n.actor }}</span>
+                    {% endif %}
+                    {{ n.message_text|default:n.message }} on <span class="font-semibold">"{{ n.post_title }}"</span>.
+                  </p>
+                  {% if n.content %}
+                    <p class="text-gray-600 text-sm mt-1">{{ n.content|truncatechars:120 }}</p>
+                  {% endif %}
+                  {% if n.created_at %}
+                  <p class="text-xs text-gray-400 mt-1">{{ n.created_at|date:"M d, Y H:i" }}</p>
+                  {% endif %}
+                  <div class="mt-2">
+                    <button class="view-post-btn text-sm text-purple-600 hover:text-purple-800 font-semibold interactive-btn"
+                            data-post-id="{{ n.post_id }}">
+                      View post details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 card-shadow">
+              Belum ada notifikasi.
+            </div>
+          {% endif %}
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- Post Detail Modal -->
+<div id="post-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900" id="post-modal-title">Post Detail</h3>
+      <button id="post-modal-close" class="text-gray-500 hover:text-gray-700">&times;</button>
+    </div>
+    <div class="p-6 overflow-y-auto space-y-4" id="post-modal-body">
+      <div class="flex items-center gap-3">
+        <img id="post-modal-avatar" src="{% static 'images/user-profile.png' %}" class="w-10 h-10 rounded-full object-cover border" alt="avatar">
+        <div>
+          <p class="text-sm text-gray-700"><span class="font-semibold" id="post-modal-author"></span></p>
+          <p class="text-xs text-gray-400" id="post-modal-date"></p>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-xl font-bold text-gray-900" id="post-modal-heading"></h4>
+        <p class="text-gray-700 leading-relaxed whitespace-pre-line mt-2" id="post-modal-content"></p>
+      </div>
+      <div id="post-modal-image-wrap" class="hidden">
+        <img id="post-modal-image" src="" alt="Post image" class="w-full rounded-lg object-cover max-h-96">
+      </div>
+      <div class="flex items-center gap-4 text-sm text-gray-600">
+        <span id="post-modal-likes">0 likes</span>
+        <span id="post-modal-dislikes">0 dislikes</span>
+        <span id="post-modal-comments">0 comments</span>
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <h5 class="text-sm font-semibold text-gray-800">Comments</h5>
+        <div id="post-modal-comments-list" class="space-y-3"></div>
+        <div id="post-modal-comments-loading" class="text-sm text-gray-400 hidden">Loading comments...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function setupPostModal() {
+    const modal = document.getElementById('post-modal');
+    const closeBtn = document.getElementById('post-modal-close');
+    const body = document.getElementById('post-modal-body');
+    if (!modal || !closeBtn || !body) return;
+
+    const avatarEl = document.getElementById('post-modal-avatar');
+    const authorEl = document.getElementById('post-modal-author');
+    const dateEl = document.getElementById('post-modal-date');
+    const headingEl = document.getElementById('post-modal-heading');
+    const contentEl = document.getElementById('post-modal-content');
+    const imageWrap = document.getElementById('post-modal-image-wrap');
+    const imageEl = document.getElementById('post-modal-image');
+    const likesEl = document.getElementById('post-modal-likes');
+    const dislikesEl = document.getElementById('post-modal-dislikes');
+    const commentsEl = document.getElementById('post-modal-comments');
+    const DEFAULT_AVATAR = "{% static 'images/user-profile.png' %}";
+    const commentsListEl = document.getElementById('post-modal-comments-list');
+    const commentsLoadingEl = document.getElementById('post-modal-comments-loading');
+
+    function toggleModal(show) {
+      modal.classList.toggle('hidden', !show);
+      modal.classList.toggle('flex', show);
+      document.body.style.overflow = show ? 'hidden' : 'auto';
+    }
+
+    function clearComments() {
+      if (commentsListEl) commentsListEl.innerHTML = '';
+    }
+
+    async function loadComments(postId) {
+      if (!commentsListEl || !commentsLoadingEl) return;
+      commentsLoadingEl.classList.remove('hidden');
+      clearComments();
+      try {
+        const res = await fetch(`/comments/post/${postId}/`);
+        if (res.status === 404) {
+          commentsListEl.innerHTML = '<p class="text-sm text-gray-500">No comments found for this post.</p>';
+          return;
+        }
+        if (!res.ok) throw new Error(`Failed to fetch comments (HTTP ${res.status})`);
+        const data = await res.json();
+        if (data.status === 'success' && Array.isArray(data.comments)) {
+          if (!data.comments.length) {
+            commentsListEl.innerHTML = '<p class="text-sm text-gray-500">No comments yet.</p>';
+          } else {
+            commentsListEl.innerHTML = data.comments.map(c => {
+              const avatar = c.profile_photo || DEFAULT_AVATAR;
+              const author = c.user || 'Unknown';
+              const created = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+              const content = (c.content || '').replace(/</g, '&lt;');
+              return `
+              <div class="flex gap-3">
+                <img src="${avatar}" alt="${author}" class="w-8 h-8 rounded-full object-cover border flex-shrink-0">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 text-sm text-gray-700">
+                    <span class="font-semibold">${author}</span>
+                    <span class="text-gray-400 text-xs">${created}</span>
+                  </div>
+                  <p class="text-gray-700 text-sm mt-1 whitespace-pre-line">${content}</p>
+                </div>
+              </div>`;
+            }).join('');
+          }
+        } else {
+          commentsListEl.innerHTML = '<p class="text-sm text-red-500">Failed to load comments.</p>';
+        }
+      } catch (err) {
+        commentsListEl.innerHTML = `<p class="text-sm text-red-500">Error loading comments. ${err.message || ''}</p>`;
+        console.error('Comment load error', err);
+      } finally {
+        commentsLoadingEl.classList.add('hidden');
+      }
+    }
+
+    async function loadPost(postId) {
+      try {
+        const res = await fetch(`/post/api/posts/${postId}/`);
+        if (!res.ok) throw new Error('Failed to fetch post');
+        const data = await res.json();
+        if (data.status !== 'success') throw new Error('Unexpected response');
+        const post = data.post;
+        headingEl.textContent = post.title || '';
+        contentEl.textContent = post.content || '';
+        authorEl.textContent = post.user || '';
+        dateEl.textContent = post.created_at ? new Date(post.created_at).toLocaleString() : '';
+        avatarEl.src = post.profile_photo || DEFAULT_AVATAR;
+        likesEl.textContent = `${post.likes_count || 0} likes`;
+        dislikesEl.textContent = `${post.dislikes_count || 0} dislikes`;
+        commentsEl.textContent = `${post.comment_count || 0} comments`;
+
+        if (post.image) {
+          imageEl.src = post.image;
+          imageWrap.classList.remove('hidden');
+        } else {
+          imageWrap.classList.add('hidden');
+        }
+        clearComments();
+        toggleModal(true);
+        loadComments(postId);
+      } catch (err) {
+        console.error('Error loading post detail', err);
+        alert('Gagal memuat detail post');
+      }
+    }
+
+    document.querySelectorAll('.view-post-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const postId = btn.dataset.postId;
+        if (postId) loadPost(postId);
+      });
+    });
+
+    closeBtn.addEventListener('click', () => toggleModal(false));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) toggleModal(false);
+    });
+  })();
+</script>
+{% endblock %}

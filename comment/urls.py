@@ -1,7 +1,7 @@
 # comment/urls.py
 from django.urls import path
 from . import views
-from post.views import show_json
+from comment.views import show_json
 
 app_name = 'comment'
 

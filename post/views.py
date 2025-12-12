@@ -11,7 +11,7 @@ from django.db.models import Q, Count
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from .models import Post, PostInteraction, PostSave, PostShare
-from comment.models import Comment
+from comment.models import Comment, CommentInteraction
 from report.models import Report
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -649,14 +649,6 @@ class PostInteractionView(View):
 
 
 # TAMBAH FUNGSI UNTUK SEARCH POST
-def search_posts(request):
-    query = request.GET.get("q", "")
-    posts = Post.objects.filter(
-        Q(title__icontains=query) | Q(content__icontains=query), is_deleted=False
-    )
-    return render(request, "search_results.html", {"posts": posts, "query": query})
-
-
 def hot_threads(request):
     """
     Menampilkan thread terpopuler berdasarkan jumlah like + komentar
