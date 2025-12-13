@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import logout as auth_logout
 
 @csrf_exempt
 def login(request):
@@ -72,3 +73,73 @@ def register(request):
             "message": "Invalid request method."
         }, status=400)
 
+@csrf_exempt
+def logout(request):
+    username = request.user.username
+    try:
+        auth_logout(request)
+        return JsonResponse({
+            "username": username,
+            "status": True,
+            "message": "Logged out successfully!"
+        }, status=200)
+    except:
+        return JsonResponse({
+            "status": False,
+            "message": "Logout failed."
+        }, status=401)
+    
+@csrf_exempt
+def change_password(request):
+    if request.method != 'POST':
+        return JsonResponse({"status": False, "message": "Invalid request method."}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"status": False, "message": "Invalid JSON."}, status=400)
+    
+    username = data.get('username')
+    old_password = data.get('old_password')
+    new_password1 = data.get('new_password1')
+    new_password2 = data.get('new_password2')
+
+    if not all([username, old_password, new_password1, new_password2]):
+        return JsonResponse({"status": False, "message": "Missing required fields."}, status=400)
+    
+    if new_password1 != new_password2:
+        return JsonResponse({"status": False, "message": "New passwords do not match."}, status=400)
+    
+    user = authenticate(username=username, password=old_password)
+    if user is None:
+        return JsonResponse({"status": False, "message": "Authentication failed. Wrong username or password."}, status=401)
+    
+    if not user.is_active:
+        return JsonResponse({"status": False, "message": "Account is disabled."}, status=403)
+    
+    user.set_password(new_password1)
+    user.save()
+    return JsonResponse({"status": True, "message": "Password changed successfully."}, status=200)
+
+@csrf_exempt
+def delete_account(request):
+    if request.method != 'POST':
+        return JsonResponse({"status": False, "message": "Invalid request method."}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"status": False, "message": "Invalid JSON."}, status=400)
+    
+    username = data.get('username')
+    password = data.get('password')
+
+    if not all([username, password]):
+        return JsonResponse({"status": False, "message": "Missing required fields."}, status=400)
+    
+    user = authenticate(username=username, password=password)
+    if user is None:
+        return JsonResponse({"status": False, "message": "Authentication failed. Wrong username or password."}, status=401)
+    
+    user.delete()
+    return JsonResponse({"status": True, "message": "Account deleted successfully."}, status=200)
