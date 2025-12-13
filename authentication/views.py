@@ -94,15 +94,16 @@ def change_password(request):
     if request.method != 'POST':
         return JsonResponse({"status": False, "message": "Invalid request method."}, status=400)
 
+    # coba parse JSON, jika gagal fallback ke request.POST
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"status": False, "message": "Invalid JSON."}, status=400)
+        data = request.POST.dict()
     
     username = data.get('username')
     old_password = data.get('old_password')
-    new_password1 = data.get('new_password1')
-    new_password2 = data.get('new_password2')
+    new_password1 = data.get('new_password1') or data.get('new_password')
+    new_password2 = data.get('new_password2') or data.get('confirm_password')
 
     if not all([username, old_password, new_password1, new_password2]):
         return JsonResponse({"status": False, "message": "Missing required fields."}, status=400)
@@ -129,8 +130,8 @@ def delete_account(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"status": False, "message": "Invalid JSON."}, status=400)
-    
+        data = request.POST.dict()  # fallback ke form-encoded  
+
     username = data.get('username')
     password = data.get('password')
 
@@ -140,6 +141,11 @@ def delete_account(request):
     user = authenticate(username=username, password=password)
     if user is None:
         return JsonResponse({"status": False, "message": "Authentication failed. Wrong username or password."}, status=401)
+
+    try:
+        auth_logout(request)
+    except Exception:
+        pass
     
     user.delete()
     return JsonResponse({"status": True, "message": "Account deleted successfully."}, status=200)
