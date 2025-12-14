@@ -7,8 +7,10 @@ from django.core.files.base import ContentFile
 import base64
 import uuid
 from post.models import Post, User
+from post.models import PostInteraction
 from ads.models import Advertisement
 from comment.models import Comment
+from comment.models import CommentInteraction
 import json
 
 
@@ -281,6 +283,136 @@ def create_comment_flutter(request):
         )
     except Post.DoesNotExist:
         return JsonResponse({"error": "Post not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+def toggle_post_reaction(request):
+    """
+    Toggle a like/dislike for a post.
+    Expects JSON: {post_id, user_id, action: 'like'|'dislike'}
+    Returns updated counts and current user_reaction.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid HTTP method"}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        post_id = data.get("post_id")
+        user_id = data.get("user_id")
+        action = data.get("action")
+
+        if not post_id or not user_id or action not in ("like", "dislike"):
+            return JsonResponse({"error": "Missing or invalid fields"}, status=400)
+
+        p = Post.objects.get(id=post_id, is_deleted=False)
+        user = User.objects.get(id=user_id)
+
+        try:
+            existing = PostInteraction.objects.get(user=user, post=p)
+        except PostInteraction.DoesNotExist:
+            existing = None
+
+        user_reaction = None
+        if existing:
+            if existing.interaction_type == action:
+                # undo
+                existing.delete()
+                user_reaction = None
+            else:
+                # change type
+                existing.interaction_type = action
+                existing.save()
+                user_reaction = action
+        else:
+            PostInteraction.objects.create(user=user, post=p, interaction_type=action)
+            user_reaction = action
+
+        return JsonResponse(
+            {
+                "message": "Toggled",
+                "likes_count": p.likes_count,
+                "dislikes_count": p.dislikes_count,
+                "user_reaction": user_reaction,
+            }
+        )
+    except Post.DoesNotExist:
+        return JsonResponse({"error": "Post not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+def toggle_comment_reaction(request):
+    """
+    Toggle a like/dislike for a comment.
+    Expects JSON: {comment_id, user_id, action: 'like'|'dislike'}
+    Returns updated counts and current user_reaction.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid HTTP method"}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        comment_id = data.get("comment_id")
+        user_id = data.get("user_id")
+        action = data.get("action")
+
+        if not comment_id or not user_id or action not in ("like", "dislike"):
+            return JsonResponse({"error": "Missing or invalid fields"}, status=400)
+
+        c = Comment.objects.get(id=comment_id, is_deleted=False)
+        user = User.objects.get(id=user_id)
+
+        try:
+            existing = CommentInteraction.objects.get(user=user, comment=c)
+        except CommentInteraction.DoesNotExist:
+            existing = None
+
+        user_reaction = None
+        if existing:
+            if existing.interaction_type == action:
+                # undo
+                existing.delete()
+                user_reaction = None
+            else:
+                existing.interaction_type = action
+                existing.save()
+                user_reaction = action
+        else:
+            CommentInteraction.objects.create(
+                user=user, comment=c, interaction_type=action
+            )
+            user_reaction = action
+
+        # Return updated counts (Comment model stores counts as fields)
+        # Recompute counts from interactions to be consistent
+        likes = c.interactions.filter(interaction_type="like").count()
+        dislikes = c.interactions.filter(interaction_type="dislike").count()
+        # Optionally update fields
+        c.likes_count = likes
+        c.dislikes_count = dislikes
+        (
+            c.save(update_fields=["likes_count", "dislikes_count"])
+            if (c.likes_count != likes or c.dislikes_count != dislikes)
+            else None
+        )
+
+        return JsonResponse(
+            {
+                "message": "Toggled",
+                "likes_count": likes,
+                "dislikes_count": dislikes,
+                "user_reaction": user_reaction,
+            }
+        )
+    except Comment.DoesNotExist:
+        return JsonResponse({"error": "Comment not found"}, status=404)
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=400)
     except Exception as e:
