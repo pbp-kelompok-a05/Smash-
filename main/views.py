@@ -67,6 +67,7 @@ def json_posts(request):
                 "updated_at": p.updated_at.isoformat() if p.updated_at else None,
                 "likes_count": p.likes_count,
                 "dislikes_count": p.dislikes_count,
+                "comments_count": p.comments.filter(is_deleted=False).count(),
                 "shares_count": p.shares_count,
                 "is_deleted": p.is_deleted,
             }
@@ -105,6 +106,7 @@ def json_post_id(request, post_id):
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
         "likes_count": p.likes_count,
         "dislikes_count": p.dislikes_count,
+        "comments_count": p.comments.filter(is_deleted=False).count(),
         "shares_count": p.shares_count,
         "is_deleted": p.is_deleted,
     }
@@ -125,7 +127,20 @@ def json_post_comments(request, post_id):
 
     comments_qs = p.comments.filter(is_deleted=False).order_by("created_at")
     comments_list = []
+    user_id = request.GET.get("user_id")
     for c in comments_qs:
+        user_reaction = None
+        if user_id:
+            try:
+                u = User.objects.get(id=user_id)
+                try:
+                    ci = CommentInteraction.objects.get(user=u, comment=c)
+                    user_reaction = ci.interaction_type
+                except CommentInteraction.DoesNotExist:
+                    user_reaction = None
+            except User.DoesNotExist:
+                user_reaction = None
+
         comments_list.append(
             {
                 "id": str(c.id),
@@ -133,6 +148,9 @@ def json_post_comments(request, post_id):
                 "author": getattr(c.user, "username", None),
                 "created_at": c.created_at.isoformat() if c.created_at else None,
                 "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                "likes_count": c.likes_count,
+                "dislikes_count": c.dislikes_count,
+                "user_reaction": user_reaction,
             }
         )
 
@@ -390,18 +408,16 @@ def toggle_comment_reaction(request):
             )
             user_reaction = action
 
-        # Return updated counts (Comment model stores counts as fields)
         # Recompute counts from interactions to be consistent
         likes = c.interactions.filter(interaction_type="like").count()
         dislikes = c.interactions.filter(interaction_type="dislike").count()
-        # Optionally update fields
-        c.likes_count = likes
-        c.dislikes_count = dislikes
-        (
+        # Update fields only if changed
+        old_likes = c.likes_count
+        old_dislikes = c.dislikes_count
+        if old_likes != likes or old_dislikes != dislikes:
+            c.likes_count = likes
+            c.dislikes_count = dislikes
             c.save(update_fields=["likes_count", "dislikes_count"])
-            if (c.likes_count != likes or c.dislikes_count != dislikes)
-            else None
-        )
 
         return JsonResponse(
             {
