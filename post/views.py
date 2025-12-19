@@ -678,3 +678,9 @@ def edit_post(request, post_id):
     except Exception as e:
         print(f"Error in edit_post view: {e}")
         return redirect('post:index')
+@login_required
+def current_user(request):
+    return JsonResponse({
+        "id": request.user.id,
+        "username": request.user.username,
+    })

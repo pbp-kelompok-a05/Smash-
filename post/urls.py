@@ -34,4 +34,5 @@ urlpatterns = [
     path("recent-threads/", views.recent_thread, name="recent_threads"),
     # Edit post
     path("edit/<uuid:post_id>/", views.edit_post, name="edit_post"),
+    path('me/', views.current_user, name="current_user"),
 ]
