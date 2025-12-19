@@ -46,6 +46,7 @@ def json_posts(request):
     """
     posts_qs = Post.objects.filter(is_deleted=False).order_by("-created_at")
     posts_list = []
+    user_id = request.GET.get("user_id")
     for p in posts_qs:
         image_url = None
         if p.image:
@@ -54,6 +55,19 @@ def json_posts(request):
             except Exception:
                 # Fallback to relative URL if building absolute fails
                 image_url = getattr(p.image, "url", None)
+
+        # optionally include the requesting user's reaction for each post
+        user_reaction = None
+        if user_id:
+            try:
+                u = User.objects.get(id=user_id)
+                try:
+                    pi = PostInteraction.objects.get(user=u, post=p)
+                    user_reaction = pi.interaction_type
+                except PostInteraction.DoesNotExist:
+                    user_reaction = None
+            except User.DoesNotExist:
+                user_reaction = None
 
         posts_list.append(
             {
@@ -70,6 +84,7 @@ def json_posts(request):
                 "comments_count": p.comments.filter(is_deleted=False).count(),
                 "shares_count": p.shares_count,
                 "is_deleted": p.is_deleted,
+                "user_reaction": user_reaction,
             }
         )
 
@@ -95,6 +110,20 @@ def json_post_id(request, post_id):
             # Fallback to relative URL if building absolute fails
             image_url = getattr(p.image, "url", None)
 
+    user_id = request.GET.get("user_id")
+
+    user_reaction = None
+    if user_id:
+        try:
+            u = User.objects.get(id=user_id)
+            try:
+                pi = PostInteraction.objects.get(user=u, post=p)
+                user_reaction = pi.interaction_type
+            except PostInteraction.DoesNotExist:
+                user_reaction = None
+        except User.DoesNotExist:
+            user_reaction = None
+
     post_data = {
         "id": str(p.id),
         "title": p.title,
@@ -109,6 +138,7 @@ def json_post_id(request, post_id):
         "comments_count": p.comments.filter(is_deleted=False).count(),
         "shares_count": p.shares_count,
         "is_deleted": p.is_deleted,
+        "user_reaction": user_reaction,
     }
 
     return JsonResponse(post_data)
@@ -349,11 +379,21 @@ def toggle_post_reaction(request):
             PostInteraction.objects.create(user=user, post=p, interaction_type=action)
             user_reaction = action
 
+        # Recompute authoritative counts from interactions
+        likes = p.interactions.filter(interaction_type="like").count()
+        dislikes = p.interactions.filter(interaction_type="dislike").count()
+        old_likes = p.likes_count
+        old_dislikes = p.dislikes_count
+        if old_likes != likes or old_dislikes != dislikes:
+            p.likes_count = likes
+            p.dislikes_count = dislikes
+            p.save(update_fields=["likes_count", "dislikes_count"])
+
         return JsonResponse(
             {
                 "message": "Toggled",
-                "likes_count": p.likes_count,
-                "dislikes_count": p.dislikes_count,
+                "likes_count": likes,
+                "dislikes_count": dislikes,
                 "user_reaction": user_reaction,
             }
         )

@@ -1,5 +1,5 @@
 # main/urls.py
-from django.urls import path
+from django.urls import include, path
 from . import views
 
 app_name = "main"
@@ -24,4 +24,5 @@ urlpatterns = [
         views.create_comment_flutter,
         name="create_flutter_comment",
     ),
+    path("auth/", include("authentication.urls")),
 ]
