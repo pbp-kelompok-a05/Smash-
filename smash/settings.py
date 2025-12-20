@@ -33,7 +33,12 @@ PRODUCTION = os.getenv("PRODUCTION", "False").lower() == "true"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "nathanael-leander-smash.pbp.cs.ui.ac.id", "10.0.2.2"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "nathanael-leander-smash.pbp.cs.ui.ac.id",
+    "10.0.2.2",
+]
 
 # Tambahan entri url proyek pws
 CSRF_TRUSTED_ORIGINS = ["https://nathanael-leander-smash.pbp.cs.ui.ac.id"]
@@ -81,8 +86,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SAMESITE = "None"
 
 ROOT_URLCONF = "smash.urls"
 
@@ -182,3 +187,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Note: For ads admin-specific login, use custom decorators in ads/views.py
 # instead of overriding the global LOGIN_URL setting
+
+# allow up to 10 MB request body for base64 uploads
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

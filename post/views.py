@@ -22,6 +22,7 @@ from django.http import HttpResponse
 import base64
 from django.core.files.base import ContentFile
 import mimetypes
+import uuid
 
 User = get_user_model()
 
@@ -825,3 +826,126 @@ def proxy_image(request):
         )
     except requests.RequestException as err:
         return HttpResponse(f"Error fetching image: {str(err)}", status=502)
+
+
+@csrf_exempt
+def create_post_flutter(request):
+    """
+    Endpoint to create a new post from a Flutter mobile app.
+    Expects JSON payload with title, content, optional image and video_link.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid HTTP method"}, status=401)
+
+    try:
+        # Accept JSON body or form-encoded data
+        data = {}
+        if request.body:
+            try:
+                data = json.loads(request.body)
+            except Exception:
+                data = request.POST.dict() if hasattr(request, "POST") else {}
+        else:
+            data = request.POST.dict() if hasattr(request, "POST") else {}
+
+        title = data.get("title")
+        content = data.get("content")
+        image_data = data.get("image") or data.get("image_data")
+        video_link = data.get("video_link", "")
+
+        # Prefer authenticated user; fall back to provided user_id in payload
+        user = None
+        if getattr(request, "user", None) and request.user.is_authenticated:
+            user = request.user
+        else:
+            provided_user_id = data.get("user_id") or data.get("userId")
+            if provided_user_id:
+                try:
+                    user = User.objects.get(id=int(provided_user_id))
+                except (User.DoesNotExist, ValueError):
+                    return JsonResponse(
+                        {"error": "User not found (provided user_id invalid)"},
+                        status=400,
+                    )
+
+        if user is None:
+            return JsonResponse(
+                {"error": "Authentication required or provide user_id in payload"},
+                status=401,
+            )
+
+        new_post = Post(user=user, title=title, content=content, video_link=video_link)
+
+        # Handle base64 image data if provided
+        if image_data:
+            try:
+                # If data URI like 'data:image/png;base64,...', split header
+                if isinstance(image_data, str) and image_data.startswith("data:"):
+                    header, encoded = image_data.split(",", 1)
+                    try:
+                        mime = header.split(";")[0].split(":")[1]
+                    except Exception:
+                        mime = None
+                else:
+                    encoded = image_data
+                    mime = None
+
+                decoded = base64.b64decode(encoded)
+
+                # Basic size and type checks
+                MAX_IMAGE_BYTES = 5 * 1024 * 1024
+                if len(decoded) > MAX_IMAGE_BYTES:
+                    return JsonResponse(
+                        {"error": "Image too large (max 5MB)"}, status=400
+                    )
+
+                detected_mime = mime
+                if not detected_mime:
+
+                    def _detect_mime(data: bytes) -> str | None:
+                        if len(data) >= 8 and data[:8] == b"\x89PNG\r\n\x1a\n":
+                            return "image/png"
+                        if len(data) >= 2 and data[0:2] == b"\xff\xd8":
+                            return "image/jpeg"
+                        if len(data) >= 6 and (
+                            data[:6] == b"GIF87a" or data[:6] == b"GIF89a"
+                        ):
+                            return "image/gif"
+                        if (
+                            len(data) >= 12
+                            and data[0:4] == b"RIFF"
+                            and data[8:12] == b"WEBP"
+                        ):
+                            return "image/webp"
+                        return None
+
+                    detected_mime = _detect_mime(decoded)
+
+                ALLOWED_MIME = {
+                    "image/png",
+                    "image/jpeg",
+                    "image/jpg",
+                    "image/webp",
+                    "image/gif",
+                }
+                if not detected_mime or detected_mime.lower() not in ALLOWED_MIME:
+                    return JsonResponse({"error": "Unsupported image type"}, status=400)
+
+                ext = detected_mime.split("/")[-1]
+                filename = f"post_{uuid.uuid4().hex[:12]}.{ext}"
+                new_post.image.save(filename, ContentFile(decoded), save=False)
+            except base64.binascii.Error:
+                return JsonResponse({"error": "Invalid base64 image data"}, status=400)
+            except Exception as ie:
+                return JsonResponse({"error": f"Invalid image data: {ie}"}, status=400)
+
+        new_post.save()
+
+        return JsonResponse(
+            {"message": "Post created successfully", "post_id": str(new_post.id)},
+            status=201,
+        )
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)

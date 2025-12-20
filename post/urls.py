@@ -49,4 +49,6 @@ urlpatterns = [
     path("edit/<int:post_id>/", views.edit_post, name="edit_post"),
     # Image Proxy
     path("image-proxy/", views.proxy_image, name="image_proxy"),
+    # Create Post API
+    path("api/create-post/", views.create_post_flutter, name="create_post_api"),
 ]
