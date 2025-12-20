@@ -678,6 +678,45 @@ def edit_post(request, post_id):
     except Exception as e:
         print(f"Error in edit_post view: {e}")
         return redirect('post:index')
+@csrf_exempt
+@login_required
+def edit_post_flutter(request, post_id):
+    post= get_object_or_404(Post, pk=post_id)
+    if post.user != request.user:
+        return JsonResponse(
+            {"status": "error", "message": "Unauthorized"},
+            status=403
+        )
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            # 4️⃣ Update field
+            post.title = data.get('title', post.title)
+            post.content = data.get('content', post.content)
+            post.image = data.get('image', post.image)
+            post.video_link = data.get('video_link', post.video_link)
+            post.updated_at = timezone.now()
+
+            # 5️⃣ Simpan
+            post.save()
+
+            return JsonResponse({
+                "status": "success",
+                "message": "News updated successfully",
+            }, status=200)
+
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": str(e)
+            }, status=400)
+
+    # 6️⃣ Jika bukan POST
+    return JsonResponse({
+        "status": "error",
+        "message": "Invalid request method"
+    }, status=405)
 @login_required
 def current_user(request):
     return JsonResponse({
