@@ -27,6 +27,97 @@ import uuid
 User = get_user_model()
 
 
+def process_post_interaction(user, post, action, data=None):
+    """Process a like/dislike/save/share/report action for a post.
+
+    Returns a dict with keys similar to the JsonResponse payload used
+    by the API view (e.g. status, message, action, likes_count, dislikes_count,
+    user_interaction, is_saved, shares_count, report_id).
+    """
+    data = data or {}
+    if action in ("like", "dislike"):
+        try:
+            interaction = PostInteraction.objects.get(user=user, post=post)
+
+            # If same interaction, remove it (toggle off)
+            if interaction.interaction_type == action:
+                interaction.delete()
+                return {
+                    "status": "success",
+                    "message": f"{action.capitalize()} removed",
+                    "action": "removed",
+                    "likes_count": post.likes_count,
+                    "dislikes_count": post.dislikes_count,
+                    "user_interaction": None,
+                }
+            else:
+                # Change interaction type (like -> dislike or vice versa)
+                interaction.interaction_type = action
+                interaction.save()
+                return {
+                    "status": "success",
+                    "message": f"Changed to {action}",
+                    "action": "changed",
+                    "likes_count": post.likes_count,
+                    "dislikes_count": post.dislikes_count,
+                    "user_interaction": action,
+                }
+        except PostInteraction.DoesNotExist:
+            PostInteraction.objects.create(
+                user=user, post=post, interaction_type=action
+            )
+            return {
+                "status": "success",
+                "message": f"Post {action}d",
+                "action": "added",
+                "likes_count": post.likes_count,
+                "dislikes_count": post.dislikes_count,
+                "user_interaction": action,
+            }
+
+    elif action == "save":
+        existing_save = PostSave.objects.filter(user=user, post=post).first()
+        if existing_save:
+            existing_save.delete()
+            return {
+                "status": "success",
+                "message": "Bookmark dihapus",
+                "action": "removed",
+                "is_saved": False,
+            }
+        PostSave.objects.create(user=user, post=post)
+        return {
+            "status": "success",
+            "message": "Post disimpan",
+            "action": "saved",
+            "is_saved": True,
+        }
+
+    elif action == "share":
+        PostShare.objects.create(user=user, post=post)
+        return {
+            "status": "success",
+            "message": "Post berhasil dibagikan",
+            "shares_count": post.shares_count,
+        }
+
+    elif action == "report":
+        report = Report.objects.create(
+            reporter=user,
+            post=post,
+            category=data.get("category", "OTHER"),
+            description=data.get("description", ""),
+        )
+        return {
+            "status": "success",
+            "message": "Post berhasil dilaporkan",
+            "report_id": report.id,
+        }
+
+    else:
+        return {"status": "error", "message": "Action tidak valid"}
+
+
 class PostAPIView(View):
     """
     API View untuk handling CRUD operations pada Post.
@@ -566,114 +657,10 @@ class PostInteractionView(View):
                 post = Post.objects.get(id=post_id, is_deleted=False)
             data = json.loads(request.body) if request.body else {}
 
-            if action == "like" or action == "dislike":
-                # Handle like/dislike action
-                try:
-                    interaction = PostInteraction.objects.get(
-                        user=request.user, post=post
-                    )
-
-                    # If same interaction, remove it (toggle off)
-                    if interaction.interaction_type == action:
-                        interaction.delete()
-                        return JsonResponse(
-                            {
-                                "status": "success",
-                                "message": f"{action.capitalize()} removed",
-                                "action": "removed",
-                                "likes_count": post.likes_count,
-                                "dislikes_count": post.dislikes_count,
-                                "user_interaction": None,
-                            }
-                        )
-                    else:
-                        # Change interaction type (like to dislike or vice versa)
-                        interaction.interaction_type = action
-                        interaction.save()
-                        return JsonResponse(
-                            {
-                                "status": "success",
-                                "message": f"Changed to {action}",
-                                "action": "changed",
-                                "likes_count": post.likes_count,
-                                "dislikes_count": post.dislikes_count,
-                                "user_interaction": action,
-                            }
-                        )
-                except PostInteraction.DoesNotExist:
-                    # Create new interaction
-                    PostInteraction.objects.create(
-                        user=request.user, post=post, interaction_type=action
-                    )
-                    return JsonResponse(
-                        {
-                            "status": "success",
-                            "message": f"Post {action}d",
-                            "action": "added",
-                            "likes_count": post.likes_count,
-                            "dislikes_count": post.dislikes_count,
-                            "user_interaction": action,
-                        }
-                    )
-
-            elif action == "report":
-                # Handle report action
-                report = Report.objects.create(
-                    reporter=request.user,
-                    post=post,
-                    category=data.get("category", "OTHER"),
-                    description=data.get("description", ""),
-                )
-
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "Post berhasil dilaporkan",
-                        "report_id": report.id,
-                    }
-                )
-
-            elif action == "save":
-                existing_save = PostSave.objects.filter(
-                    user=request.user, post=post
-                ).first()
-                if existing_save:
-                    existing_save.delete()
-                    return JsonResponse(
-                        {
-                            "status": "success",
-                            "message": "Bookmark dihapus",
-                            "action": "removed",
-                            "is_saved": False,
-                        }
-                    )
-
-                PostSave.objects.create(user=request.user, post=post)
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "Post disimpan",
-                        "action": "saved",
-                        "is_saved": True,
-                    }
-                )
-
-            elif action == "share":
-                # Handle share action - track each share
-                PostShare.objects.create(user=request.user, post=post)
-
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": "Post berhasil dibagikan",
-                        "shares_count": post.shares_count,
-                    }
-                )
-
-            else:
-                return JsonResponse(
-                    {"status": "error", "message": "Action tidak valid"}, status=400
-                )
+            # Delegate processing to reusable helper
+            result = process_post_interaction(request.user, post, action, data)
+            status_code = 200 if result.get("status") == "success" else 400
+            return JsonResponse(result, status=status_code)
 
         except Post.DoesNotExist:
             return JsonResponse(
