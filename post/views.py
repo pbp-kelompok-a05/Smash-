@@ -17,8 +17,14 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
 from profil.models import Profile
+import requests
+from django.http import HttpResponse
+import base64
+from django.core.files.base import ContentFile
+import mimetypes
 
 User = get_user_model()
+
 
 class PostAPIView(View):
     """
@@ -51,7 +57,11 @@ class PostAPIView(View):
                 if user.id in profile_cache:
                     return profile_cache[user.id]
                 profile = Profile.objects.filter(user=user).first()
-                url = profile.profile_photo.url if profile and profile.profile_photo else None
+                url = (
+                    profile.profile_photo.url
+                    if profile and profile.profile_photo
+                    else None
+                )
                 profile_cache[user.id] = url
                 return url
 
@@ -85,9 +95,15 @@ class PostAPIView(View):
 
                 # Get user interaction if authenticated
                 user_interaction = (
-                    user_interactions.get(post.id) if request.user.is_authenticated else None
+                    user_interactions.get(post.id)
+                    if request.user.is_authenticated
+                    else None
                 )
-                is_saved = post.id in saved_post_ids if request.user.is_authenticated else False
+                is_saved = (
+                    post.id in saved_post_ids
+                    if request.user.is_authenticated
+                    else False
+                )
 
                 post_data = {
                     "id": post.id,
@@ -155,7 +171,11 @@ class PostAPIView(View):
                         if request.user.is_authenticated
                         else None
                     )
-                    is_saved = post.id in saved_post_ids if request.user.is_authenticated else False
+                    is_saved = (
+                        post.id in saved_post_ids
+                        if request.user.is_authenticated
+                        else False
+                    )
 
                     posts_data.append(
                         {
@@ -291,6 +311,18 @@ class PostAPIView(View):
 
                 post.image = image_file
                 post.save()
+
+            # Handle base64 image data (from mobile clients)
+            if not image_file and data.get("image_data"):
+                try:
+                    image_b64 = data.get("image_data")
+                    image_name = data.get("image_name") or f"post_{post.id}.jpg"
+                    file_data = base64.b64decode(image_b64)
+                    post.image.save(image_name, ContentFile(file_data))
+                    post.save()
+                except Exception as e:
+                    # If saving image fails, log and continue (post already created)
+                    print(f"Failed to save base64 image: {e}")
 
             return JsonResponse(
                 {
@@ -489,16 +521,17 @@ class PostAPIView(View):
             )
 
 
-@login_required(login_url='account:login_register')
+@login_required(login_url="account:login_register")
 def edit_post_page(request, post_id):
     post = get_object_or_404(Post, id=post_id, is_deleted=False)
     if not (post.user == request.user or request.user.is_superuser):
-        return redirect('main:home')
+        return redirect("main:home")
     context = {
         "post": post,
         "page_title": "Edit Post",
     }
     return render(request, "edit_post.html", context)
+
 
 class PostInteractionView(View):
     """
@@ -524,7 +557,9 @@ class PostInteractionView(View):
                 )
 
             # Superuser can interact with any post (even if soft-deleted)
-            if request.user.is_superuser or request.user.has_perm("post.manage_all_posts"):
+            if request.user.is_superuser or request.user.has_perm(
+                "post.manage_all_posts"
+            ):
                 post = Post.objects.get(id=post_id)
             else:
                 post = Post.objects.get(id=post_id, is_deleted=False)
@@ -598,7 +633,9 @@ class PostInteractionView(View):
                 )
 
             elif action == "save":
-                existing_save = PostSave.objects.filter(user=request.user, post=post).first()
+                existing_save = PostSave.objects.filter(
+                    user=request.user, post=post
+                ).first()
                 if existing_save:
                     existing_save.delete()
                     return JsonResponse(
@@ -710,21 +747,81 @@ def edit_post(request, post_id):
     """
     try:
         post = get_object_or_404(Post, id=post_id, is_deleted=False)
-        
+
         # Check permissions
         is_owner = post.user == request.user
-        is_superuser = request.user.is_superuser or request.user.has_perm("post.manage_all_posts")
-        
+        is_superuser = request.user.is_superuser or request.user.has_perm(
+            "post.manage_all_posts"
+        )
+
         if not (is_owner or is_superuser):
-            return redirect('post:index')
-        
-        context = {
-            'post': post,
-            'page_title': f'Edit Post - {post.title}'
-        }
-        
-        return render(request, 'edit_post.html', context)
-        
+            return redirect("post:index")
+
+        context = {"post": post, "page_title": f"Edit Post - {post.title}"}
+
+        return render(request, "edit_post.html", context)
+
     except Exception as e:
         print(f"Error in edit_post view: {e}")
-        return redirect('post:index')
+        return redirect("post:index")
+
+
+def proxy_image(request):
+    image_url = request.GET.get("url")
+    if not image_url:
+        return HttpResponse("No URL provided", status=400)
+
+    proxy_headers = {
+        "User-Agent": "smash/1.0",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    }
+
+    # Resolve relative URLs to absolute (serve local media correctly)
+    if image_url.startswith("/"):
+        image_url = request.build_absolute_uri(image_url)
+    elif not image_url.lower().startswith("http"):
+        # Treat as relative path
+        if not image_url.startswith("/"):
+            image_url = f"/{image_url}"
+        image_url = request.build_absolute_uri(image_url)
+
+    try:
+        # Fetch image from external source with a friendly UA to avoid 403s
+        response = requests.get(image_url, timeout=10, headers=proxy_headers)
+        response.raise_for_status()
+
+        content_type = response.headers.get("Content-Type", "").lower()
+
+        # Fall back to inferring type for providers that omit the header
+        if not content_type.startswith("image/"):
+            guessed_type, _ = mimetypes.guess_type(image_url)
+            if guessed_type and guessed_type.startswith("image/"):
+                content_type = guessed_type
+            else:
+                payload = response.content
+                if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+                    content_type = "image/png"
+                elif payload.startswith(b"RIFF") and payload[8:12] == b"WEBP":
+                    content_type = "image/webp"
+                elif payload.startswith(b"\xff\xd8"):
+                    content_type = "image/jpeg"
+                elif payload.startswith(b"GIF87a") or payload.startswith(b"GIF89a"):
+                    content_type = "image/gif"
+                else:
+                    content_type = "image/jpeg"
+
+        resp = HttpResponse(
+            response.content,
+            content_type=content_type or "application/octet-stream",
+        )
+        # Helpful headers for clients (CORS for web use, caching)
+        resp["Access-Control-Allow-Origin"] = "*"
+        resp["Cache-Control"] = "max-age=3600, public"
+        return resp
+    except requests.exceptions.HTTPError as err:
+        status_code = err.response.status_code if err.response else 502
+        return HttpResponse(
+            f"Upstream responded with {status_code}", status=status_code
+        )
+    except requests.RequestException as err:
+        return HttpResponse(f"Error fetching image: {str(err)}", status=502)
