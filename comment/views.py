@@ -3,7 +3,9 @@ import json
 from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.shortcuts import redirect
+from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -43,7 +45,11 @@ class CommentAPIView(View):
                 if user.id in profile_cache:
                     return profile_cache[user.id]
                 profile = Profile.objects.filter(user=user).first()
-                url = profile.profile_photo.url if profile and profile.profile_photo else None
+                url = (
+                    profile.profile_photo.url
+                    if profile and profile.profile_photo
+                    else None
+                )
                 profile_cache[user.id] = url
                 return url
 
@@ -521,32 +527,127 @@ class CommentInteractionView(View):
                 {"status": "error", "message": f"Error processing action: {str(e)}"},
                 status=500,
             )
+
+
+@require_http_methods(["POST"])
+@csrf_protect
+def comment_interaction_web(request, comment_id, action):
+    """
+    Web-friendly endpoint for comment interactions.
+    Accepts standard form POSTs (CSRF-protected) and redirects back to Referer.
+    """
+    try:
+        if not request.user.is_authenticated:
+            messages.error(request, "Authentication required")
+            return redirect(request.META.get("HTTP_REFERER", "/"))
+
+        comment = Comment.objects.get(id=comment_id, is_deleted=False)
+        data = json.loads(request.body) if request.body else {}
+
+        # Reuse logic from CommentInteractionView (like/dislike/report)
+        if action == "like":
+            interaction, created = CommentInteraction.objects.get_or_create(
+                user=request.user,
+                comment=comment,
+                defaults={"interaction_type": "like"},
+            )
+
+            if not created:
+                if interaction.interaction_type == "like":
+                    interaction.delete()
+                    comment.likes_count = max(0, comment.likes_count - 1)
+                    comment.save()
+                    messages.success(request, "Like removed")
+                else:
+                    interaction.interaction_type = "like"
+                    interaction.save()
+                    comment.dislikes_count = max(0, comment.dislikes_count - 1)
+                    comment.likes_count += 1
+                    comment.save()
+                    messages.success(request, "Changed to like")
+            else:
+                comment.likes_count += 1
+                comment.save()
+                messages.success(request, "Komentar berhasil disukai")
+
+        elif action == "dislike":
+            interaction, created = CommentInteraction.objects.get_or_create(
+                user=request.user,
+                comment=comment,
+                defaults={"interaction_type": "dislike"},
+            )
+
+            if not created:
+                if interaction.interaction_type == "dislike":
+                    interaction.delete()
+                    comment.dislikes_count = max(0, comment.dislikes_count - 1)
+                    comment.save()
+                    messages.success(request, "Dislike removed")
+                else:
+                    interaction.interaction_type = "dislike"
+                    interaction.save()
+                    comment.likes_count = max(0, comment.likes_count - 1)
+                    comment.dislikes_count += 1
+                    comment.save()
+                    messages.success(request, "Changed to dislike")
+            else:
+                comment.dislikes_count += 1
+                comment.save()
+                messages.success(request, "Komentar berhasil di-dislike")
+
+        elif action == "report":
+            report = Report.objects.create(
+                reporter=request.user,
+                comment=comment,
+                category=data.get("category", "OTHER"),
+                description=data.get("description", ""),
+            )
+            messages.success(request, "Komentar berhasil dilaporkan")
+
+        else:
+            messages.error(request, "Action tidak valid")
+
+        return redirect(request.META.get("HTTP_REFERER", "/"))
+
+    except Comment.DoesNotExist:
+        messages.error(request, "Komentar tidak ditemukan")
+        return redirect(request.META.get("HTTP_REFERER", "/"))
+    except Exception as e:
+        messages.error(request, f"Error processing action: {e}")
+        return redirect(request.META.get("HTTP_REFERER", "/"))
+
+
 def show_json(request):
-    comment_list= Comment.objects.all()
-    interaction_list=CommentInteraction.objects.all()
-    comments_data=[
+    comment_list = Comment.objects.all()
+    interaction_list = CommentInteraction.objects.all()
+    comments_data = [
         {
-            'id': str(comment.id),
-            'post_id': comment.post.id,
-            'parent_id': comment.parent.id,
-            'user_id': comment.user_id,
-            'content': comment.content,
-            'emoji':comment.emoji,
-            'created_at': comment.created_at.isoformat() if comment.created_at else None,
-            'updated_at': comment.updated_at.isoformat() if comment.updated_at else None,
-            'is_deleted': comment.is_deleted,
+            "id": str(comment.id),
+            "post_id": comment.post.id,
+            "parent_id": comment.parent.id,
+            "user_id": comment.user_id,
+            "content": comment.content,
+            "emoji": comment.emoji,
+            "created_at": (
+                comment.created_at.isoformat() if comment.created_at else None
+            ),
+            "updated_at": (
+                comment.updated_at.isoformat() if comment.updated_at else None
+            ),
+            "is_deleted": comment.is_deleted,
             "likes_count": comment.likes_count,
             "dislikes_count": comment.dislikes_count,
         }
         for comment in comment_list
     ]
-    interaction_data= [
+    interaction_data = [
         {
-            'comment_id': str(interaction.comment.id),
-            'user_id': interaction.user_id,
-            'interaction_type': interaction.interaction_type,
-            'created_at': interaction.created_at.isoformat() if interaction.created_at else None,
+            "comment_id": str(interaction.comment.id),
+            "user_id": interaction.user_id,
+            "interaction_type": interaction.interaction_type,
+            "created_at": (
+                interaction.created_at.isoformat() if interaction.created_at else None
+            ),
         }
         for interaction in interaction_list
     ]
-    
