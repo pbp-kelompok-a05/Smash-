@@ -15,6 +15,8 @@ urlpatterns = [
     path(
         "api/posts/<int:post_id>/", views.PostAPIView.as_view(), name="post_api_detail"
     ),
+    # Get Comments API (placed before generic action route to avoid matching collisions)
+    path("api/posts/<int:post_id>/comments/", views.get_comments, name="get_comments"),
     # Post Interactions (Like, Dislike, Report, Share)
     path(
         "api/posts/<int:post_id>/<str:action>/",
@@ -51,4 +53,8 @@ urlpatterns = [
     path("image-proxy/", views.proxy_image, name="image_proxy"),
     # Create Post API
     path("api/create-post/", views.create_post_flutter, name="create_post_api"),
+    # Create Comment API
+    path(
+        "api/create-comment/", views.create_comment_flutter, name="create_comment_api"
+    ),
 ]
