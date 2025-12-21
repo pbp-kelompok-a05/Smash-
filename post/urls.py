@@ -55,6 +55,10 @@ urlpatterns = [
     path("image-proxy/", views.proxy_image, name="image_proxy"),
     # Create Post API
     path("api/create-post/", views.create_post_flutter, name="create_post_api"),
+    # Edit Post API for Flutter clients (accepts POST with base64 image)
+    path(
+        "edit-flutter/<int:post_id>/", views.edit_post_flutter, name="edit_post_flutter"
+    ),
     # Create Comment API
     path(
         "api/create-comment/", views.create_comment_flutter, name="create_comment_api"
