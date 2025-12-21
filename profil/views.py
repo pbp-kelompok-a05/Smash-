@@ -216,7 +216,6 @@ def profile_api(request, user_id=None):
             except json.JSONDecodeError:
                 return JsonResponse({"status": False, "message": "Invalid JSON payload."}, status=400)
         elif request.method in ("PATCH", "PUT") and request.content_type:
-            # Django doesn't always populate request.POST for PATCH/PUT with form-encoded bodies
             data = QueryDict(request.body)
         else:
             data = request.POST
