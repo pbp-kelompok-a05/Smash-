@@ -1153,6 +1153,73 @@ def edit_post_flutter(request, post_id):
         return JsonResponse({"error": str(e)}, status=400)
 
 
+@csrf_exempt
+def save_post_flutter(request):
+    """
+    Toggle save/bookmark for a post via mobile client.
+
+    Accepts POST with JSON or form data containing `post_id` and optional
+    `user_id`. If the request is authenticated, uses `request.user`.
+    Returns {status: 'success', action: 'saved'|'removed', is_saved: bool}.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid HTTP method"}, status=401)
+
+    try:
+        # parse body
+        data = {}
+        if request.body:
+            try:
+                data = json.loads(request.body)
+            except Exception:
+                data = request.POST.dict() if hasattr(request, "POST") else {}
+        else:
+            data = request.POST.dict() if hasattr(request, "POST") else {}
+
+        post_id = data.get("post_id") or data.get("postId")
+        if not post_id:
+            return JsonResponse({"error": "post_id is required"}, status=400)
+
+        # determine user
+        user = None
+        if getattr(request, "user", None) and request.user.is_authenticated:
+            user = request.user
+        else:
+            provided_user_id = data.get("user_id") or data.get("userId")
+            if provided_user_id:
+                try:
+                    user = User.objects.get(id=int(provided_user_id))
+                except (User.DoesNotExist, ValueError):
+                    return JsonResponse(
+                        {"error": "User not found (provided user_id invalid)"},
+                        status=400,
+                    )
+
+        if user is None:
+            return JsonResponse(
+                {"error": "Authentication required or provide user_id in payload"},
+                status=401,
+            )
+
+        try:
+            post = Post.objects.get(id=int(post_id), is_deleted=False)
+        except (Post.DoesNotExist, ValueError):
+            return JsonResponse({"error": "Post not found"}, status=404)
+
+        existing = PostSave.objects.filter(user=user, post=post).first()
+        if existing:
+            existing.delete()
+            return JsonResponse(
+                {"status": "success", "action": "removed", "is_saved": False}
+            )
+
+        PostSave.objects.create(user=user, post=post)
+        return JsonResponse({"status": "success", "action": "saved", "is_saved": True})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
 def get_comments(request, post_id):
     """
     Returns comments for a specific post as JSON suitable for consumption by a

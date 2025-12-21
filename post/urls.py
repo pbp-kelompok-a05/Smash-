@@ -59,6 +59,8 @@ urlpatterns = [
     path(
         "edit-flutter/<int:post_id>/", views.edit_post_flutter, name="edit_post_flutter"
     ),
+    # Save/Bookmark Post API (mobile)
+    path("api/save-post/", views.save_post_flutter, name="save_post_api"),
     # Create Comment API
     path(
         "api/create-comment/", views.create_comment_flutter, name="create_comment_api"
