@@ -765,7 +765,7 @@ function createPostCard(post) {
     }
 
     return `
-        <div class="post-card" data-post-id="${post.id}">
+        <div class="post-card" id="post-${post.id}" data-post-id="${post.id}">
             <article class="bg-white rounded-xl overflow-hidden card-shadow mb-6">
                 <header class="px-6 py-4 flex items-start gap-4">
                     <a href="${profileUrl}" class="block flex-shrink-0">
@@ -1287,6 +1287,17 @@ function initializePostInteractions() {
             }
         });
     });
+}
+
+function scrollToSharedPost() {
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith('#post-')) return;
+    const target = document.getElementById(hash.slice(1));
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        target.classList.add('ring-2', 'ring-purple-300');
+        setTimeout(() => target.classList.remove('ring-2', 'ring-purple-300'), 1500);
+    }
 }
 
 // Handle post interactions (like/dislike)
@@ -1895,6 +1906,7 @@ async function loadPosts() {
         if (data.status === 'success' && Array.isArray(data.posts) && data.posts.length > 0) {
             container.innerHTML = data.posts.map(post => createPostCard(post)).join('');
             initializePostInteractions();
+            scrollToSharedPost();
         } else {
             showNoPostsMessage(container);
         }

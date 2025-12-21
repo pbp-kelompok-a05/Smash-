@@ -188,6 +188,9 @@ def profile_api(request, user_id=None):
             "username": profile_obj.user.username,
             "bio": profile_obj.bio,
             "profile_photo": photo_url,
+            "date_joined": profile_obj.user.date_joined.isoformat()
+            if profile_obj.user.date_joined
+            else None,
         }
 
     if request.method == "GET":
