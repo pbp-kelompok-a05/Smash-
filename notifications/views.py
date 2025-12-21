@@ -37,6 +37,7 @@ def build_notifications(user):
 
     post_interactions = (
         PostInteraction.objects.filter(post__user=user, post__is_deleted=False)
+        .exclude(interaction_type="dislike")
         .select_related("user", "post")
         .order_by("-id")[:50]
     )
@@ -57,6 +58,7 @@ def build_notifications(user):
 
     comment_interactions = (
         CommentInteraction.objects.filter(comment__user=user)
+        .exclude(interaction_type="dislike")
         .exclude(user=user)
         .select_related("user", "comment", "comment__post")
         .order_by("-created_at")[:50]
@@ -123,7 +125,6 @@ def build_notifications(user):
             continue
         if ci.comment.post and getattr(ci.comment.post, "is_deleted", False):
             continue
-        verb = "liked" if ci.interaction_type == "like" else "disliked"
         notifications.append(
             {
                 "type": f"{ci.interaction_type}_comment",
@@ -133,8 +134,8 @@ def build_notifications(user):
                 "post_title": ci.comment.post.title,
                 "post_id": ci.comment.post.id,
                 "content": ci.comment.content,
-                "message": f"@{ci.user.username} {verb} your comment",
-                "message_text": f"{verb} your comment",
+                "message": f"@{ci.user.username} liked your comment",
+                "message_text": "liked your comment",
                 "timestamp": getattr(ci, "created_at", None),
             }
         )
