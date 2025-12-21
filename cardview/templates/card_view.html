@@ -400,7 +400,7 @@
 
   if (shareBtn) {
     shareBtn.addEventListener('click', function() {
-      const url = window.location.origin + `?post=${postId}`;
+      const url = `${window.location.origin}/post/${postId}/`;
       if (navigator.share) {
         navigator.share({ title: 'Smash! Post', url });
       } else if (navigator.clipboard) {

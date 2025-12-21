@@ -36,6 +36,8 @@ urlpatterns = [
     path("bookmarks/", views.bookmarked_threads, name="bookmarked_threads"),
     # Halaman Thread Terbaru
     path("recent-threads/", views.recent_thread, name="recent_threads"),
+    # Halaman Detail Post
+    path("<int:post_id>/", views.post_detail, name="post_detail"),
     # Notifications
     path(
         "notifications/", notifications_views.notifications_view, name="notifications"

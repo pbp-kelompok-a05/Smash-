@@ -19,12 +19,28 @@ from datetime import timedelta
 from profil.models import Profile
 import requests
 from django.http import HttpResponse
+from urllib.parse import parse_qs, urlparse
 import base64
 from django.core.files.base import ContentFile
 import mimetypes
 import uuid
 
 User = get_user_model()
+
+
+def _extract_youtube_thumbnail(video_link):
+    if not video_link:
+        return None
+    video_id = ""
+    if "youtu.be/" in video_link:
+        video_id = video_link.split("youtu.be/")[1].split("?")[0]
+    elif "youtube.com/watch" in video_link:
+        query = urlparse(video_link).query
+        video_id = parse_qs(query).get("v", [""])[0]
+    if not video_id:
+        return None
+    return f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+
 
 
 def process_post_interaction(user, post, action, data=None):
@@ -728,6 +744,38 @@ def recent_thread(request):
     )
 
 
+def post_detail(request, post_id):
+    can_manage_all = request.user.is_authenticated and (
+        request.user.is_superuser or request.user.has_perm("post.manage_all_posts")
+    )
+    if can_manage_all:
+        post = get_object_or_404(Post, id=post_id)
+    else:
+        post = get_object_or_404(Post, id=post_id, is_deleted=False)
+
+    user_interaction = None
+    is_saved = False
+    if request.user.is_authenticated:
+        user_interaction = (
+            PostInteraction.objects.filter(user=request.user, post=post)
+            .values_list("interaction_type", flat=True)
+            .first()
+        )
+        is_saved = PostSave.objects.filter(user=request.user, post=post).exists()
+
+    post.user_interaction = user_interaction
+    post.is_saved = is_saved
+    post.can_edit = request.user.is_authenticated and (
+        post.user == request.user or can_manage_all
+    )
+    post.comment_count = post.comments.filter(is_deleted=False).count()
+    post.video_thumbnail = _extract_youtube_thumbnail(post.video_link)
+
+    return render(
+        request, "post/post_detail.html", {"post": post, "page_title": post.title}
+    )
+
+
 @login_required
 def edit_post(request, post_id):
     """
@@ -952,6 +1000,17 @@ def get_comments(request, post_id):
     # Order by newest first for mobile clients
     comments_qs = p.comments.filter(is_deleted=False).order_by("-created_at")
     comments_list = []
+    profile_cache = {}
+
+    def get_profile_photo_url(user_obj):
+        if not user_obj:
+            return None
+        if user_obj.id in profile_cache:
+            return profile_cache[user_obj.id]
+        profile = Profile.objects.filter(user=user_obj).first()
+        url = profile.profile_photo.url if profile and profile.profile_photo else None
+        profile_cache[user_obj.id] = url
+        return url
     user_id = request.GET.get("user_id")
     for c in comments_qs:
         user_reaction = None
@@ -971,6 +1030,8 @@ def get_comments(request, post_id):
                 "id": c.id,
                 "content": c.content,
                 "author": getattr(c.user, "username", None),
+                "user_id": c.user.id if c.user else None,
+                "profile_photo": get_profile_photo_url(c.user),
                 "created_at": c.created_at.isoformat() if c.created_at else None,
                 "updated_at": c.updated_at.isoformat() if c.updated_at else None,
                 "likes_count": c.likes_count,
